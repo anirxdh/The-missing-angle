@@ -12,6 +12,14 @@ python3 -m uvicorn server:app --host 127.0.0.1 --port 8000
 
 Open `http://127.0.0.1:8000`.
 
+## Deploy on Vercel
+
+1. Import the GitHub repo in [Vercel](https://vercel.com).
+2. In **Project → Settings → Environment Variables**, add `ELEVENLABS_API_KEY` (and optionally `PRUNA_API_KEY`).
+3. Redeploy after env vars are set.
+
+Vercel runs `server.py` as a FastAPI function. Background media pre-generation is disabled there; committed files under `static/` are served as-is.
+
 ## Environment
 
 `ELEVENLABS_API_KEY` is required for narration, character voices, and spoken choice selection.

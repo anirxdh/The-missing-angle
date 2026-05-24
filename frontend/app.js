@@ -2,7 +2,8 @@
    Flow: video plays -> narration -> pauses -> character line -> clue choices appear.
    The viewer chooses what the movie follows next. */
 
-const WS_URL = `ws://${location.host}/ws/game`;
+const WS_PROTO = location.protocol === "https:" ? "wss" : "ws";
+const WS_URL = `${WS_PROTO}://${location.host}/ws/game`;
 
 const CHAR_COLOR = { SARA: "#f472b6", COLE: "#94a3b8", MAYA: "#a78bfa" };
 

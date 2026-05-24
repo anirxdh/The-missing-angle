@@ -30,12 +30,28 @@ SIMLI_KEY  = lambda: os.getenv("SIMLI_API_KEY", "")
 ELEVEN_BASE = "https://api.elevenlabs.io/v1"
 ELEVEN_KEY  = lambda: os.getenv("ELEVENLABS_API_KEY", "")
 
-# Disk cache directory — images persist across server restarts (never re-charged)
-CACHE_DIR = pathlib.Path(__file__).parent / "static" / "cache"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
+_ROOT = pathlib.Path(__file__).parent
+_ON_VERCEL = bool(os.getenv("VERCEL"))
 
-MUSIC_DIR = pathlib.Path(__file__).parent / "static" / "music"
-MUSIC_DIR.mkdir(parents=True, exist_ok=True)
+
+def _ensure_dir(path: pathlib.Path) -> pathlib.Path:
+    """Create dir when writable; on Vercel only /tmp is writable."""
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
+    return path
+
+
+# Disk cache — use /tmp on Vercel (deploy filesystem is read-only; static/cache is not in git)
+CACHE_DIR = (
+    _ensure_dir(pathlib.Path("/tmp/speechengine/cache"))
+    if _ON_VERCEL
+    else _ensure_dir(_ROOT / "static" / "cache")
+)
+
+MUSIC_DIR = _ROOT / "static" / "music"
+_ensure_dir(MUSIC_DIR)
 
 # In-memory caches
 _scene_image_cache: dict[str, str] = {}   # atmosphere → base64 JPEG
@@ -251,8 +267,8 @@ from characters import CHARACTERS as _CHARACTERS
 CHARACTER_PORTRAIT_PROMPTS = {name: c["portrait_prompt"] for name, c in _CHARACTERS.items()}
 
 
-AVATARS_DIR = pathlib.Path(__file__).parent / "static" / "avatars"
-AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+AVATARS_DIR = _ROOT / "static" / "avatars"
+_ensure_dir(AVATARS_DIR)
 
 
 def _save_portrait_for_frontend(character_name: str, b64: str):

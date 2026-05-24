@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import pathlib
 import re
 import time
 import uuid
@@ -20,6 +21,9 @@ from story_engine import StoryEngine, SCENES
 from characters import CHARACTERS, ALL_VOICES
 from media_engine import generate_scene_image, generate_scene_music, SCENE_MUSIC_PROMPTS
 
+ROOT = pathlib.Path(__file__).resolve().parent
+ON_VERCEL = bool(os.getenv("VERCEL"))
+
 app = FastAPI(title="The Missing Angle")
 engine = StoryEngine()
 
@@ -32,14 +36,17 @@ PRUNA_ENABLED      = bool(os.getenv("PRUNA_API_KEY", ""))
 
 @app.on_event("startup")
 async def startup():
-    # Always kick off music generation — only needs ElevenLabs key (always present)
+    # Vercel filesystem is read-only except /tmp; pre-generated assets ship in git.
+    if ON_VERCEL:
+        print("[Startup] Vercel — skipping background media pre-generation")
+        return
+
     asyncio.create_task(_pregen_all_scene_music())
 
     if not PRUNA_ENABLED:
         print("[Media] No PRUNA_API_KEY — image generation skipped")
         return
 
-    # Scene image generation in background
     asyncio.create_task(_pregen_all_scene_images())
 
 
@@ -418,14 +425,14 @@ async def clone_voice(character: str = Form(...), file: UploadFile = File(...)):
 
 # ── Static / frontend ──────────────────────────────────────────────────────
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
 
 @app.get("/")
-def index():  return FileResponse("frontend/index.html")
+def index():  return FileResponse(ROOT / "frontend/index.html")
 @app.get("/app.js")
-def js():     return FileResponse("frontend/app.js")
+def js():     return FileResponse(ROOT / "frontend/app.js")
 @app.get("/style.css")
-def css():    return FileResponse("frontend/style.css")
+def css():    return FileResponse(ROOT / "frontend/style.css")
 
 if __name__ == "__main__":
     import uvicorn
