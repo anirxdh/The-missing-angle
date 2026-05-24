@@ -1,0 +1,303 @@
+{
+  "story_title": "THE MISSING ANGLE",
+  "story_premise": "You are watching a thriller that has already happened. At each pause, you choose which clue the film follows, and that changes what the ending means.",
+  "scenes": {
+    "party_night": {
+      "id": "party_night",
+      "title": "The Film Begins",
+      "atmosphere": "party_night",
+      "characters_present": [],
+      "pause_at": 99,
+      "auto_advance": "intro",
+      "narrator_character": "NARRATOR",
+      "question": null,
+      "branches": {},
+      "narration": "This already happened. Daniel enters the stairwell at 10:57. Three minutes later, the night starts lying."
+    },
+    "intro": {
+      "id": "intro",
+      "title": "The Morning After",
+      "atmosphere": "intro",
+      "characters_present": [],
+      "pause_at": 6,
+      "auto_advance": "sara_calls",
+      "question": null,
+      "branches": {},
+      "narration": "Morning edits the night into something simple: Daniel fell. But the footage keeps catching on Sara, frozen near the stairwell, right before the sound."
+    },
+    "sara_calls": {
+      "id": "sara_calls",
+      "title": "Sara's Lie",
+      "atmosphere": "sara_calls",
+      "characters_present": ["SARA"],
+      "pause_at": 6,
+      "question": {
+        "character": "SARA",
+        "text": "If Cole asks, I was never near the stairs. That is the only way this does not ruin all of us."
+      },
+      "branches": {
+        "stay_quiet": {
+          "label": "follow Sara's lie / protect Sara / keep her secret / stay with Sara / help Sara / trust Sara / cover for Sara",
+          "next": "detective_arrives"
+        },
+        "cant_lie": {
+          "label": "question the lie / expose the crack / doubt Sara / follow the truth / don't trust Sara / challenge Sara",
+          "next": "sara_comes_over"
+        }
+      },
+      "narration": "Sara calls before the police do. The film pauses here. She sounds calm. She practiced this."
+    },
+    "detective_arrives": {
+      "id": "detective_arrives",
+      "title": "Cole's Camera",
+      "atmosphere": "detective_arrives",
+      "characters_present": ["COLE"],
+      "pause_at": 6,
+      "question": {
+        "character": "COLE",
+        "text": "She says she was upstairs. The camera says someone in her coat crossed the landing at 11:04."
+      },
+      "branches": {
+        "lie": {
+          "label": "hide the camera / protect the lie / keep watching Sara's version / help Sara / keep it hidden",
+          "next": "cole_pushes"
+        },
+        "truth": {
+          "label": "show the camera / follow Cole / reveal the footage / show the evidence / trust Cole",
+          "next": "ending_witness"
+        }
+      },
+      "narration": "Cole does not raise his voice. He never has to. He lets the camera make the room smaller."
+    },
+    "cole_pushes": {
+      "id": "cole_pushes",
+      "title": "The Evidence",
+      "atmosphere": "cole_pushes",
+      "characters_present": ["COLE"],
+      "pause_at": 6,
+      "question": {
+        "character": "COLE",
+        "text": "Watch her hands. People lie with words. Their hands usually tell the truth first."
+      },
+      "branches": {
+        "hold_the_lie": {
+          "label": "cut away / protect Sara / keep the lie intact / hide the evidence / help Sara",
+          "next": "ending_complicit"
+        },
+        "confess": {
+          "label": "zoom in / follow the hands / inspect the frame / look closer / check the frame",
+          "next": "cole_follows_up"
+        }
+      },
+      "narration": "Four seconds. Rewind. Four seconds again. The scene is daring you to mistake motion for intent."
+    },
+    "cole_follows_up": {
+      "id": "cole_follows_up",
+      "title": "Frame 1432",
+      "atmosphere": "cole_follows_up",
+      "characters_present": ["COLE"],
+      "pause_at": 6,
+      "question": {
+        "character": "COLE",
+        "text": "There. Frame 1432. Sara is not pushing him. She is reaching for something behind him."
+      },
+      "branches": {
+        "full_account": {
+          "label": "show the full frame / reveal everything / complete the evidence / show it all / full truth",
+          "next": "ending_witness_broken"
+        },
+        "partial": {
+          "label": "leave doubt / keep it unclear / hide the missing edge / keep it ambiguous",
+          "next": "ending_witness_doubt"
+        }
+      },
+      "narration": "The frame holds. A hand, a shoulder, the edge of someone else just outside the crop. One inch changes the story."
+    },
+    "sara_comes_over": {
+      "id": "sara_comes_over",
+      "title": "Sara's Version",
+      "atmosphere": "sara_comes_over",
+      "characters_present": ["SARA"],
+      "pause_at": 6,
+      "question": {
+        "character": "SARA",
+        "text": "Pause it there. Before you decide what I am, look at who Daniel was blocking."
+      },
+      "branches": {
+        "listen": {
+          "label": "rewind five minutes / hear Sara out / follow her clue / listen to Sara / give Sara time",
+          "next": "maya_calls"
+        },
+        "already_called": {
+          "label": "cut to police / skip her explanation / end the scene / call police / don't listen",
+          "next": "ending_alone"
+        }
+      },
+      "narration": "Sara does not defend herself. She points to the corner of the image, where the movie has been hiding its second story."
+    },
+    "maya_calls": {
+      "id": "maya_calls",
+      "title": "Maya's Angle",
+      "atmosphere": "maya_calls",
+      "characters_present": ["MAYA"],
+      "pause_at": 6,
+      "question": {
+        "character": "MAYA",
+        "text": "He had my phone. Sara was not chasing him. She was chasing what he stole from me."
+      },
+      "branches": {
+        "bring_maya": {
+          "label": "bring Maya into frame / reveal her side / connect both stories / bring Maya in / listen to Maya",
+          "next": "ending_truth_together"
+        },
+        "just_sara": {
+          "label": "stay with Sara / keep Maya offscreen / isolate the confession / just Sara / ignore Maya",
+          "next": "sara_reveals"
+        }
+      },
+      "narration": "The missing angle has a voice now. Not Sara's. Maya's."
+    },
+    "sara_reveals": {
+      "id": "sara_reveals",
+      "title": "The Fall",
+      "atmosphere": "sara_reveals",
+      "characters_present": ["SARA"],
+      "pause_at": 6,
+      "question": {
+        "character": "SARA",
+        "text": "I pushed his hand away. He stepped back like he knew the stair was not there. I swear I tried to catch him."
+      },
+      "branches": {
+        "believe_her": {
+          "label": "believe the reach / accept Sara's version / follow the rescue / believe Sara / trust Sara",
+          "next": "ending_truth"
+        },
+        "dont_believe_her": {
+          "label": "read it as murder / reject Sara / follow suspicion / don't believe Sara / blame Sara",
+          "next": "ending_betrayal"
+        }
+      },
+      "narration": "The fall finally plays without a cut. Somehow, that makes it less certain."
+    },
+    "ending_complicit": {
+      "id": "ending_complicit",
+      "title": "COMPLICIT",
+      "atmosphere": "ending_complicit",
+      "characters_present": ["SARA"],
+      "pause_at": 6,
+      "question": {
+        "character": "SARA",
+        "text": "Some stories survive because nobody looks at the part that hurts."
+      },
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "complicit",
+      "narration": "The cut protects Sara. Daniel becomes an accident. The ending feels peaceful because it refuses to look down."
+    },
+    "ending_witness": {
+      "id": "ending_witness",
+      "title": "THE CLEAN CUT",
+      "atmosphere": "ending_witness",
+      "characters_present": ["COLE"],
+      "pause_at": 6,
+      "question": {
+        "character": "COLE",
+        "text": "A camera does not know motive. It only knows who was there."
+      },
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "witness",
+      "narration": "The obvious footage wins. Sara is taken in. The case makes sense, which is usually when a story is most dangerous."
+    },
+    "ending_witness_broken": {
+      "id": "ending_witness_broken",
+      "title": "TOO LATE",
+      "atmosphere": "ending_witness_broken",
+      "characters_present": ["COLE"],
+      "pause_at": 6,
+      "question": {
+        "character": "COLE",
+        "text": "That frame should have been the beginning. Instead, it arrives at the end."
+      },
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "witness_broken",
+      "narration": "The full frame clears the shape of Sara's hand. It cannot clear the lie she told before anyone saw it."
+    },
+    "ending_witness_doubt": {
+      "id": "ending_witness_doubt",
+      "title": "SHADOW OF DOUBT",
+      "atmosphere": "ending_witness_doubt",
+      "characters_present": ["COLE"],
+      "pause_at": 6,
+      "question": {
+        "character": "COLE",
+        "text": "Enough to doubt. Not enough to know."
+      },
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "witness_doubt",
+      "narration": "The edge stays hidden. Doubt does what truth cannot: it opens every door and closes none of them."
+    },
+    "ending_truth": {
+      "id": "ending_truth",
+      "title": "TRUTH",
+      "atmosphere": "ending_truth",
+      "characters_present": ["SARA"],
+      "pause_at": 6,
+      "question": {
+        "character": "SARA",
+        "text": "I did not save him. But I tried."
+      },
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "truth",
+      "narration": "The movie chooses the reach over the shove. Daniel still falls. Sara still lies. Only the meaning changes."
+    },
+    "ending_truth_together": {
+      "id": "ending_truth_together",
+      "title": "UNITED",
+      "atmosphere": "ending_truth_together",
+      "characters_present": ["MAYA"],
+      "pause_at": 6,
+      "question": {
+        "character": "MAYA",
+        "text": "Now play it with all of us in the frame."
+      },
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "truth_together",
+      "narration": "Maya enters the frame, and the whole film tilts. Sara was not hiding a murder. She was hiding who Daniel had cornered first."
+    },
+    "ending_betrayal": {
+      "id": "ending_betrayal",
+      "title": "BETRAYED",
+      "atmosphere": "ending_betrayal",
+      "characters_present": ["SARA"],
+      "pause_at": 6,
+      "question": {
+        "character": "SARA",
+        "text": "You saw the same frame I did. You just needed it to mean something worse."
+      },
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "betrayal",
+      "narration": "The angle decides before the truth can speak. Sara becomes guilty because the frame needs someone to blame."
+    },
+    "ending_alone": {
+      "id": "ending_alone",
+      "title": "ALONE",
+      "atmosphere": "ending_alone",
+      "characters_present": ["SARA"],
+      "pause_at": 6,
+      "question": {
+        "character": "SARA",
+        "text": "Then you never get to know what was behind him."
+      },
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "alone",
+      "narration": "The explanation is cut. Sara disappears into the next scene, and the film leaves you holding the wrong question."
+    }
+  }
+}

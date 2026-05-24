@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Missing Angle</title>
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="/static/brand/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- Scene layers back to front -->
+  <div id="scene-bg"></div>
+  <video id="scene-video-a" class="scene-video active" autoplay muted loop playsinline></video>
+  <video id="scene-video-b" class="scene-video"        autoplay muted loop playsinline></video>
+  <div id="vignette"></div>
+  <canvas id="scene-canvas"></canvas>
+
+  <!-- Cinematic bars -->
+  <div class="cinema-bar top"></div>
+  <div class="cinema-bar bottom"></div>
+
+  <!-- Scene flash -->
+  <div id="scene-transition"></div>
+
+  <!-- Choice options — appear on video after character speaks -->
+  <div id="choice-overlay">
+    <button class="choice-btn" id="choice-a"></button>
+    <button class="choice-btn" id="choice-b"></button>
+  </div>
+  <button id="voice-choice-btn">Speak Choice</button>
+  <div id="choice-hint"></div>
+
+  <!-- Subtitles -->
+  <div id="subtitle-area">
+    <div id="character-label"></div>
+    <div id="subtitle-text"></div>
+  </div>
+
+  <!-- Ending screen -->
+  <div id="ending-screen">
+    <img class="brand-mark ending-mark" src="/static/brand/icon-192.png" alt="" />
+    <div id="ending-eyebrow">THE MISSING ANGLE</div>
+    <div id="ending-name"></div>
+    <div id="ending-desc"></div>
+    <button id="ending-replay">play again</button>
+  </div>
+
+  <!-- Click to begin splash — gates audio autoplay -->
+  <div id="splash">
+    <div id="splash-frame">
+      <div class="splash-scan"></div>
+      <img class="brand-mark splash-mark" src="/static/brand/icon-192.png" alt="" />
+      <div id="splash-title">THE MISSING ANGLE</div>
+      <div id="splash-sub">Every cut changes the truth.</div>
+      <button id="splash-btn">BEGIN</button>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

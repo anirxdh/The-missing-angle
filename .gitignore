@@ -1,0 +1,14 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Generated/cached media that is not required by runtime
+static/cache/
+static/scenes-flow/
+
+# Local scratch/old patch artifacts
+*.patch
+apply_skip_lipsync_talk_mode.py
