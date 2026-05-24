@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -98,7 +99,45 @@ async def tts(text: str, character: str) -> bytes:
         return r.content
 
 
-# ── WebSocket ──────────────────────────────────────────────────────────────
+# ── Game session transport (WebSocket locally, HTTP batch on Vercel) ───────
+
+class SessionSink:
+    """Collects outbound game events for WebSocket or HTTP responses."""
+
+    def __init__(self, ws: Optional[WebSocket] = None):
+        self.ws = ws
+        self.messages: list[dict] = []
+        self.auto_advance: Optional[dict] = None
+
+    @property
+    def is_http(self) -> bool:
+        return self.ws is None
+
+    async def send(self, msg: dict):
+        if self.ws is not None:
+            await self.ws.send_json(msg)
+        else:
+            self.messages.append(msg)
+
+    def schedule_auto_advance(self, next_scene_id: str, delay_sec: float, sid: str):
+        if self.ws is not None:
+            asyncio.create_task(
+                _auto_advance(self, SCENES[next_scene_id], delay_sec, sid)
+            )
+        else:
+            self.auto_advance = {
+                "next_scene_id": next_scene_id,
+                "delay_ms": int(max(500, delay_sec * 1000)),
+            }
+
+
+def _http_payload(sid: str, sink: SessionSink) -> dict:
+    return {
+        "session_id": sid,
+        "messages": sink.messages,
+        "auto_advance": sink.auto_advance,
+    }
+
 
 @app.websocket("/ws/game")
 async def game_ws(ws: WebSocket):
@@ -106,7 +145,7 @@ async def game_ws(ws: WebSocket):
     sid = str(uuid.uuid4())
 
     try:
-        await _run_session(ws, sid)
+        await _run_session(SessionSink(ws), sid)
     except WebSocketDisconnect:
         pass
     except Exception as e:
@@ -116,24 +155,25 @@ async def game_ws(ws: WebSocket):
             pass
 
 
-async def _run_session(ws: WebSocket, sid: str):
+async def _run_session(sink: SessionSink, sid: str):
     engine.reset_state(sid)
-    intro = SCENES["party_night"]
+    await _send_scene_start(sink, SCENES["party_night"], sid)
 
-    # Send initial scene + question audio (both arrive before user does anything)
-    await _send_scene_start(ws, intro, sid)
+    if sink.is_http:
+        return
 
-    # Main loop
-    async for msg in _receive_loop(ws):
+    async for msg in _receive_loop(sink.ws):
         if msg.get("type") == "bytes":
-            await _handle_voice_choice(ws, sid, msg["data"])
+            await _handle_voice_choice(sink, sid, msg["data"])
         elif msg.get("type") == "text_input":
             branch_key = msg.get("branch_key")
             if branch_key:
-                await _handle_branch_choice(ws, sid, branch_key, msg.get("text", "").strip())
+                await _handle_branch_choice(
+                    sink, sid, branch_key, msg.get("text", "").strip()
+                )
         elif msg.get("type") == "restart":
             engine.reset_state(sid)
-            await _send_scene_start(ws, SCENES["party_night"], sid)
+            await _send_scene_start(sink, SCENES["party_night"], sid)
 
 
 async def _receive_loop(ws: WebSocket):
@@ -151,14 +191,13 @@ async def _receive_loop(ws: WebSocket):
                 pass
 
 
-async def _send_scene_start(ws: WebSocket, scene: dict, sid: Optional[str] = None):
+async def _send_scene_start(sink: SessionSink, scene: dict, sid: Optional[str] = None):
     if sid and scene.get("id"):
         engine.get_state(sid).current_scene = scene["id"]
 
     payload = _scene_payload(scene)
-    await ws.send_json({"type": "scene_start", "scene": payload})
+    await sink.send({"type": "scene_start", "scene": payload})
 
-    # Auto-advance scenes (like intro) — narrate then jump
     auto_next = scene.get("auto_advance")
     if auto_next and auto_next in SCENES:
         t0 = time.time()
@@ -169,44 +208,37 @@ async def _send_scene_start(ws: WebSocket, scene: dict, sid: Optional[str] = Non
             audio_b64 = None
             try:
                 audio = await tts(narration, narrator)
-                # Estimate playback duration from MP3 byte size (128 kbps)
                 narration_secs = len(audio) / 16000
                 audio_b64 = base64.b64encode(audio).decode()
             except Exception as e:
                 print(f"[TTS] Narrator failed: {e}")
-                narration_secs = len(narration) * 0.065  # fallback: ~150 wpm
-            await ws.send_json({
+                narration_secs = len(narration) * 0.065
+            await sink.send({
                 "type":      "scene_narration",
                 "text":      narration,
                 "audio_b64": audio_b64,
             })
-        # Fire auto-advance after narration finishes + small buffer,
-        # subtracting time already spent on TTS so the wall-clock total is right
-        elapsed   = time.time() - t0
+        elapsed = time.time() - t0
         adv_delay = max(0.5, narration_secs + 1.0 - elapsed)
-        asyncio.create_task(_auto_advance(ws, SCENES[auto_next], adv_delay, sid))
+        sink.schedule_auto_advance(auto_next, adv_delay, sid or "")
         return
 
-    # Send choices immediately; speech audio can arrive after without blocking options.
     narration = scene.get("narration") if _should_narrate(scene) else None
     question  = scene.get("question")
+    narrator  = scene.get("narrator_character", "NARRATOR")
 
-    narrator       = scene.get("narrator_character", "NARRATOR")
-    narration_task = asyncio.ensure_future(tts(narration, narrator)) if narration else None
-
-    if narration_task:
+    if narration:
         audio_b64 = None
         try:
-            narration_audio = await narration_task
-            audio_b64 = base64.b64encode(narration_audio).decode()
+            audio_b64 = base64.b64encode(await tts(narration, narrator)).decode()
         except Exception as e:
             print(f"[TTS] Narrator failed: {e}")
-        await ws.send_json({"type": "scene_narration", "text": narration, "audio_b64": audio_b64})
+        await sink.send({"type": "scene_narration", "text": narration, "audio_b64": audio_b64})
 
     if question:
         character = question["character"]
         text      = question["text"]
-        await ws.send_json({
+        await sink.send({
             "type":             "scene_question",
             "character":        character,
             "text":             text,
@@ -214,20 +246,21 @@ async def _send_scene_start(ws: WebSocket, scene: dict, sid: Optional[str] = Non
             "pause_at":         scene.get("pause_at", 6),
             "options":          _branch_options(scene),
         })
-        asyncio.create_task(_send_question_audio(ws, character, text))
+        if sink.is_http:
+            await _send_question_audio(sink, character, text)
+        else:
+            asyncio.create_task(_send_question_audio(sink, character, text))
 
 
-async def _auto_advance(ws: WebSocket, next_scene: dict, delay: float, sid: Optional[str] = None):
-    """Wait for intro video to play, then automatically load next scene."""
+async def _auto_advance(sink: SessionSink, next_scene: dict, delay: float, sid: Optional[str] = None):
     await asyncio.sleep(delay)
-    await _send_scene_start(ws, next_scene, sid)
+    await _send_scene_start(sink, next_scene, sid)
 
 
-
-async def _send_question_audio(ws: WebSocket, character: str, text: str):
+async def _send_question_audio(sink: SessionSink, character: str, text: str):
     try:
         audio = await tts(text, character)
-        await ws.send_json({
+        await sink.send({
             "type":      "scene_question_audio",
             "character": character,
             "text":      text,
@@ -255,7 +288,7 @@ async def transcribe_choice_audio(audio: bytes) -> str:
         return (data.get("text") or "").strip()
 
 
-async def _handle_voice_choice(ws: WebSocket, sid: str, audio: bytes):
+async def _handle_voice_choice(sink: SessionSink, sid: str, audio: bytes):
     state = engine.get_state(sid)
     scene = state.get_scene()
     if not scene.get("branches"):
@@ -264,23 +297,23 @@ async def _handle_voice_choice(ws: WebSocket, sid: str, audio: bytes):
     try:
         transcript = await transcribe_choice_audio(audio)
     except Exception as e:
-        await ws.send_json({"type": "voice_no_match", "message": str(e)})
+        await sink.send({"type": "voice_no_match", "message": str(e)})
         return
 
     if not transcript:
-        await ws.send_json({"type": "voice_no_match", "message": "No speech detected"})
+        await sink.send({"type": "voice_no_match", "message": "No speech detected"})
         return
 
-    await ws.send_json({"type": "transcript", "text": transcript})
+    await sink.send({"type": "transcript", "text": transcript})
     branch_key = _match_branch_key(scene, transcript)
     if not branch_key:
-        await ws.send_json({"type": "voice_no_match", "message": "No matching choice"})
+        await sink.send({"type": "voice_no_match", "message": "No matching choice"})
         return
 
-    await _handle_branch_choice(ws, sid, branch_key, transcript)
+    await _handle_branch_choice(sink, sid, branch_key, transcript)
 
 
-async def _handle_branch_choice(ws: WebSocket, sid: str, branch_key: str, text: str):
+async def _handle_branch_choice(sink: SessionSink, sid: str, branch_key: str, text: str):
     state = engine.get_state(sid)
     scene = state.get_scene()
     branch = scene.get("branches", {}).get(branch_key)
@@ -296,12 +329,11 @@ async def _handle_branch_choice(ws: WebSocket, sid: str, branch_key: str, text: 
     state.choices_made.append({"from": state.current_scene, "to": next_scene_id, "said": text})
     state.current_scene = next_scene_id
 
-    await asyncio.sleep(0.6)   # brief beat so the choice registers visually
+    await asyncio.sleep(0.6)
 
-    # Use _send_scene_start for all cases — it handles narration + question + ending flag
-    await _send_scene_start(ws, next_scene, sid)
+    await _send_scene_start(sink, next_scene, sid)
     if next_scene.get("is_ending"):
-        await ws.send_json({"type": "ending", "scene": next_scene_id})
+        await sink.send({"type": "ending", "scene": next_scene_id})
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -408,6 +440,62 @@ async def health():
 @app.get("/api/scenes")
 async def get_scenes():
     return {"scenes": list(SCENES.keys())}
+
+
+class SessionIdBody(BaseModel):
+    session_id: str
+
+
+class ChoiceBody(BaseModel):
+    session_id: str
+    branch_key: str
+    text: str = ""
+
+
+@app.post("/api/game/session")
+async def http_game_session():
+    """Start a game (HTTP fallback for Vercel — no WebSockets)."""
+    sid = str(uuid.uuid4())
+    sink = SessionSink()
+    engine.reset_state(sid)
+    await _send_scene_start(sink, SCENES["party_night"], sid)
+    return _http_payload(sid, sink)
+
+
+@app.post("/api/game/advance")
+async def http_game_advance(body: SessionIdBody):
+    """Continue after an auto-advance scene (intro → sara_calls, etc.)."""
+    state = engine.get_state(body.session_id)
+    scene = state.get_scene()
+    next_id = scene.get("auto_advance")
+    if not next_id or next_id not in SCENES:
+        raise HTTPException(400, "No auto-advance pending for this scene")
+    sink = SessionSink()
+    await _send_scene_start(sink, SCENES[next_id], body.session_id)
+    return _http_payload(body.session_id, sink)
+
+
+@app.post("/api/game/choice")
+async def http_game_choice(body: ChoiceBody):
+    sink = SessionSink()
+    await _handle_branch_choice(sink, body.session_id, body.branch_key, body.text)
+    return _http_payload(body.session_id, sink)
+
+
+@app.post("/api/game/voice")
+async def http_game_voice(session_id: str = Form(...), file: UploadFile = File(...)):
+    sink = SessionSink()
+    audio = await file.read()
+    await _handle_voice_choice(sink, session_id, audio)
+    return _http_payload(session_id, sink)
+
+
+@app.post("/api/game/restart")
+async def http_game_restart(body: SessionIdBody):
+    sink = SessionSink()
+    engine.reset_state(body.session_id)
+    await _send_scene_start(sink, SCENES["party_night"], body.session_id)
+    return _http_payload(body.session_id, sink)
 
 @app.post("/api/clone-voice")
 async def clone_voice(character: str = Form(...), file: UploadFile = File(...)):

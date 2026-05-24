@@ -4,6 +4,7 @@
 
 const WS_PROTO = location.protocol === "https:" ? "wss" : "ws";
 const WS_URL = `${WS_PROTO}://${location.host}/ws/game`;
+const PREFER_HTTP_GAME = location.hostname.includes("vercel.app");
 
 const CHAR_COLOR = { SARA: "#f472b6", COLE: "#94a3b8", MAYA: "#a78bfa" };
 
@@ -54,6 +55,9 @@ function _fadeMusic(target){
 
 // ── State ─────────────────────────────────────────────────────────────────
 let ws              = null;
+let useHttpGame     = false;
+let httpSessionId   = null;
+let httpAdvanceTimer = null;
 let currentScene    = null;
 let pendingQ        = null;
 let hasPaused       = false;
@@ -104,16 +108,101 @@ initFx();
   requestAnimationFrame(loop);
 })();
 
-// ── WebSocket ─────────────────────────────────────────────────────────────
+// ── WebSocket (local) / HTTP batch (Vercel) ─────────────────────────────────
 function connect(){
+  if(PREFER_HTTP_GAME || useHttpGame){ useHttpGame = true; httpStart(); return; }
+
   ws = new WebSocket(WS_URL);
-  ws.onopen    = ()=>{};
+  const fallback = setTimeout(()=>{
+    if(ws?.readyState !== WebSocket.OPEN){
+      useHttpGame = true;
+      try{ ws.close(); }catch(e){}
+      ws = null;
+      httpStart();
+    }
+  }, 2500);
+
+  ws.onopen = ()=> clearTimeout(fallback);
   ws.onmessage = e => handle(JSON.parse(e.data));
-  ws.onerror   = ()=>{};
-  ws.onclose   = ()=> setTimeout(connect, 2000);
+  ws.onerror = ()=>{};
+  ws.onclose = ()=>{
+    clearTimeout(fallback);
+    if(!useHttpGame) setTimeout(connect, 2000);
+  };
 }
-function send(obj){ ws?.readyState===1 && ws.send(JSON.stringify(obj)); }
-function sendBlob(b){ ws?.readyState===1 && ws.send(b); }
+
+function dispatchHttp(data){
+  httpSessionId = data.session_id || httpSessionId;
+  (data.messages || []).forEach(handle);
+  if(httpAdvanceTimer){ clearTimeout(httpAdvanceTimer); httpAdvanceTimer = null; }
+  if(data.auto_advance){
+    httpAdvanceTimer = setTimeout(
+      ()=> httpAdvance(),
+      data.auto_advance.delay_ms || 3000
+    );
+  }
+}
+
+async function httpStart(){
+  try{
+    const r = await fetch("/api/game/session", {method:"POST"});
+    if(!r.ok) throw new Error(await r.text());
+    dispatchHttp(await r.json());
+  }catch(e){
+    console.error("http game start:", e);
+  }
+}
+
+async function httpAdvance(){
+  if(!httpSessionId) return;
+  try{
+    const r = await fetch("/api/game/advance", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({session_id: httpSessionId}),
+    });
+    if(!r.ok) throw new Error(await r.text());
+    dispatchHttp(await r.json());
+  }catch(e){
+    console.error("http game advance:", e);
+  }
+}
+
+function send(obj){
+  if(useHttpGame){
+    if(obj.type === "text_input" && obj.branch_key){
+      fetch("/api/game/choice", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          session_id: httpSessionId,
+          branch_key: obj.branch_key,
+          text: obj.text || "",
+        }),
+      }).then(r=>r.json()).then(dispatchHttp).catch(e=>console.error(e));
+    }else if(obj.type === "restart"){
+      fetch("/api/game/restart", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({session_id: httpSessionId}),
+      }).then(r=>r.json()).then(dispatchHttp).catch(e=>console.error(e));
+    }
+    return;
+  }
+  if(ws?.readyState===1) ws.send(JSON.stringify(obj));
+}
+
+function sendBlob(b){
+  if(useHttpGame && httpSessionId){
+    const fd = new FormData();
+    fd.append("session_id", httpSessionId);
+    fd.append("file", b, "choice.webm");
+    fetch("/api/game/voice", {method:"POST", body: fd})
+      .then(r=>r.json()).then(dispatchHttp).catch(e=>console.error(e));
+    return;
+  }
+  if(ws?.readyState===1) ws.send(b);
+}
 
 // ── Message router ────────────────────────────────────────────────────────
 function handle(msg){
@@ -142,10 +231,7 @@ function onSceneStart(scene){
   if(pauseTimer){ clearTimeout(pauseTimer); pauseTimer=null; }
 
   const atm = scene.atmosphere || "default";
-  const vidUrl = `/static/scenes/${atm}.mp4`;
-  fetch(vidUrl, {method:"HEAD"})
-    .then(r=>{ if(r.ok) crossfadeVideo(vidUrl); })
-    .catch(()=>{});
+  crossfadeVideo(`/static/scenes/${atm}.mp4`);
 
   setSceneMusic(atm);
 }
@@ -426,6 +512,7 @@ document.getElementById("splash-btn").addEventListener("click", async ()=>{
   } catch(e){}
   unlockMediaAudio();
   bgMusicReady = true;
+  crossfadeVideo("/static/scenes/party_night.mp4");
 
   const splash = document.getElementById("splash");
   splash.classList.add("hidden");

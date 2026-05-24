@@ -20,7 +20,7 @@ Open `http://127.0.0.1:8000`.
 2. In **Project → Settings → Environment Variables**, add `ELEVENLABS_API_KEY` (and optionally `PRUNA_API_KEY`).
 3. Redeploy after env vars are set.
 
-Vercel runs `server.py` as a FastAPI function. Background media pre-generation is disabled there; committed files under `static/` are served as-is.
+Vercel runs `server.py` as a FastAPI function. WebSockets are not supported on Vercel; the app uses `/api/game/*` HTTP endpoints automatically on `*.vercel.app`. Background media pre-generation is disabled there; committed files under `static/` are served as-is.
 
 ## Environment
 
