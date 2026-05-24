@@ -2,6 +2,8 @@
 
 An interactive cinematic thriller where the viewer chooses which clue the film follows next.
 
+**Live demo:** https://the-missing-angle.vercel.app
+
 ## Run locally
 
 ```bash
