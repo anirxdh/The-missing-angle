@@ -337,7 +337,7 @@ async function onSceneNarration(msg){
   _narrationAbort = true;
   subtitleText.style.opacity = "0";
   subtitleText.classList.remove("narration", "typing");
-  await sleep(80);
+  await sleep(40);
   subtitleText.textContent = "";
   subtitleText.style.opacity = "1";
 
@@ -585,7 +585,7 @@ function showLine(char, text){
     subtitleText.classList.add("fade-in");
     subtitleText.style.opacity = "1";
     setTimeout(()=> subtitleText.classList.remove("fade-in"), 400);
-  }, 150);
+  }, 60);
 }
 function clearSubtitle(){ charLabel.textContent=""; subtitleText.textContent=""; }
 

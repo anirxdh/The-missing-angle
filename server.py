@@ -276,6 +276,29 @@ async def _send_scene_start(sink: SessionSink, scene: dict, sid: Optional[str] =
     question  = scene.get("question")
     narrator  = scene.get("narrator_character", "NARRATOR")
 
+    if narration and question and sink.is_http:
+        # HTTP (Vercel): generate all TTS in parallel to stay under the 10s timeout
+        character       = question["character"]
+        text            = question["text"]
+        decision_prompt = _decision_prompt(scene)
+        results = await asyncio.gather(
+            tts(narration, narrator),
+            tts(text, character),
+            tts(decision_prompt, "NARRATOR"),
+            return_exceptions=True,
+        )
+        narr_b64 = base64.b64encode(results[0]).decode() if isinstance(results[0], bytes) else None
+        q_b64    = base64.b64encode(results[1]).decode() if isinstance(results[1], bytes) else None
+        d_b64    = base64.b64encode(results[2]).decode() if isinstance(results[2], bytes) else None
+        await sink.send({"type": "scene_narration", "text": narration, "audio_b64": narr_b64})
+        await sink.send({
+            "type": "scene_question", "character": character, "text": text,
+            "audio_b64": q_b64, "decision_prompt": decision_prompt,
+            "decision_audio_b64": d_b64,
+            "pause_at": scene.get("pause_at", 6), "options": _branch_options(scene),
+        })
+        return
+
     if narration:
         audio_b64 = None
         try:
@@ -298,10 +321,7 @@ async def _send_scene_start(sink: SessionSink, scene: dict, sid: Optional[str] =
             "pause_at":         scene.get("pause_at", 6),
             "options":          _branch_options(scene),
         })
-        if sink.is_http:
-            await _send_question_audio(sink, character, text, decision_prompt)
-        else:
-            asyncio.create_task(_send_question_audio(sink, character, text, decision_prompt))
+        asyncio.create_task(_send_question_audio(sink, character, text, decision_prompt))
 
 
 async def _auto_advance(sink: SessionSink, next_scene: dict, delay: float, sid: Optional[str] = None):
