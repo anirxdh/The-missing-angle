@@ -380,9 +380,9 @@ async def transcribe_choice_audio(audio: bytes) -> str:
         return (data.get("text") or "").strip()
 
 
-async def _handle_voice_choice(sink: SessionSink, sid: str, audio: bytes):
+async def _handle_voice_choice(sink: SessionSink, sid: str, audio: bytes, scene_id: str = ""):
     state = engine.get_state(sid)
-    scene = state.get_scene()
+    scene = _restore_scene(state, scene_id)
     if not scene.get("branches"):
         return
 
@@ -672,10 +672,10 @@ async def http_game_choice(body: ChoiceBody):
 
 
 @app.post("/api/game/voice")
-async def http_game_voice(session_id: str = Form(...), file: UploadFile = File(...)):
+async def http_game_voice(session_id: str = Form(...), file: UploadFile = File(...), scene_id: str = Form("")):
     sink = SessionSink()
     audio = await file.read()
-    await _handle_voice_choice(sink, session_id, audio)
+    await _handle_voice_choice(sink, session_id, audio, scene_id)
     return _http_payload(session_id, sink)
 
 

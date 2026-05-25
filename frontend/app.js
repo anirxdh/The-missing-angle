@@ -251,6 +251,7 @@ function sendBlob(b){
   if(useHttpGame && httpSessionId){
     const fd = new FormData();
     fd.append("session_id", httpSessionId);
+    fd.append("scene_id", currentScene?.id || "");
     fd.append("file", b, "choice.webm");
     fetch("/api/game/voice", {method:"POST", body: fd})
       .then(r=>r.json()).then(dispatchHttp).catch(e=>console.error(e));
