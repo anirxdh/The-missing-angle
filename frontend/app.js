@@ -746,11 +746,24 @@ function _waitForVideoReady(video){
 
 async function playTrailerSequence(urls){
   const valid = urls.filter(Boolean);
-  for(let i = 0; i < valid.length; i++){
-    if(i === 0) _showTrailerTitleCard("intro");
-    if(i === valid.length - 1) _showTrailerTitleCard("outro");
-    await playTrailerVideo(valid[i]);
-  }
+  if(!valid.length) return;
+
+  _showTrailerTitleCard("intro"); // auto-hides after 1.8s
+
+  // Show outro card 4s before the video ends via timeupdate
+  const video = trailerVideo;
+  let outroDone = false;
+  const onTimeUpdate = ()=>{
+    if(!outroDone && video.duration && video.currentTime >= video.duration - 4){
+      outroDone = true;
+      _showTrailerTitleCard("outro");
+    }
+  };
+  video.addEventListener("timeupdate", onTimeUpdate);
+
+  for(const url of valid) await playTrailerVideo(url);
+
+  video.removeEventListener("timeupdate", onTimeUpdate);
   _hideTrailerTitleCard();
 }
 
