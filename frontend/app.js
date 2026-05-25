@@ -213,7 +213,7 @@ async function httpAdvance(){
     const r = await fetch("/api/game/advance", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({session_id: httpSessionId}),
+      body: JSON.stringify({session_id: httpSessionId, scene_id: currentScene?.id || ""}),
     });
     if(!r.ok) throw new Error(await r.text());
     dispatchHttp(await r.json());
@@ -232,6 +232,7 @@ function send(obj){
           session_id: httpSessionId,
           branch_key: obj.branch_key,
           text: obj.text || "",
+          scene_id: currentScene?.id || "",
         }),
       }).then(r=>r.json()).then(dispatchHttp).catch(e=>console.error(e));
     }else if(obj.type === "restart"){

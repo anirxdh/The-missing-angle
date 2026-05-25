@@ -621,12 +621,22 @@ async def get_trailer():
 
 class SessionIdBody(BaseModel):
     session_id: str
+    scene_id: str = ""   # client sends current scene; survives cold-start state loss
 
 
 class ChoiceBody(BaseModel):
     session_id: str
     branch_key: str
     text: str = ""
+    scene_id: str = ""   # same — lets server restore scene without in-memory state
+
+
+def _restore_scene(state, scene_id: str) -> dict:
+    """Use scene_id from request when available; fall back to engine state."""
+    if scene_id and scene_id in SCENES:
+        state.current_scene = scene_id
+        return SCENES[scene_id]
+    return state.get_scene()
 
 
 @app.post("/api/game/session")
@@ -641,9 +651,9 @@ async def http_game_session():
 
 @app.post("/api/game/advance")
 async def http_game_advance(body: SessionIdBody):
-    """Continue after an auto-advance scene (intro → sara_calls, etc.)."""
+    """Continue after an auto-advance scene."""
     state = engine.get_state(body.session_id)
-    scene = state.get_scene()
+    scene = _restore_scene(state, body.scene_id)
     next_id = scene.get("auto_advance")
     if not next_id or next_id not in SCENES:
         raise HTTPException(400, "No auto-advance pending for this scene")
@@ -654,6 +664,8 @@ async def http_game_advance(body: SessionIdBody):
 
 @app.post("/api/game/choice")
 async def http_game_choice(body: ChoiceBody):
+    state = engine.get_state(body.session_id)
+    _restore_scene(state, body.scene_id)   # restores current_scene before branch lookup
     sink = SessionSink()
     await _handle_branch_choice(sink, body.session_id, body.branch_key, body.text)
     return _http_payload(body.session_id, sink)
