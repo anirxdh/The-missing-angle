@@ -24,9 +24,12 @@ Vercel runs `server.py` as a FastAPI function. WebSockets are not supported on V
 
 ## Environment
 
-`ELEVENLABS_API_KEY` is required for narration, character voices, and spoken choice selection.
+`ELEVENLABS_API_KEY` is required for narration, character voices, and spoken choice transcription.
+
+`GROQ_API_KEY` is recommended for the voice-choice director that maps natural speech to one of the two visible options. If it is missing, the app falls back to a local matcher.
 
 Optional:
 
 - `PRUNA_API_KEY` for scene image generation.
 - `SARA_VOICE_ID`, `COLE_VOICE_ID`, `MAYA_VOICE_ID`, `NARRATOR_VOICE_ID` to override default voices.
+- `TRAILER_NARRATOR_VOICE_ID` to use a separate lower cinematic voice for the trailer.

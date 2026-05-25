@@ -49,12 +49,12 @@ CHARACTERS = {
 
 NARRATOR = {
     "name": "NARRATOR",
-    "voice_id": os.getenv("NARRATOR_VOICE_ID") or DEFAULT_VOICE_IDS["NARRATOR"],
+    "voice_id": os.getenv("NARRATOR_VOICE_ID") or DEFAULT_VOICE_IDS["TRAILER_THRILLER"],
     "model_id": "eleven_multilingual_v2",
     "voice_settings": {
-        "stability": 0.42,
+        "stability": 0.62,
         "similarity_boost": 0.76,
-        "style": 0.88,
+        "style": 0.30,
         "use_speaker_boost": True,
     },
     "color": "#ffffff",
@@ -67,4 +67,22 @@ NARRATOR_MALE = {
     "color": "#ffffff",
 }
 
-ALL_VOICES = {**CHARACTERS, "NARRATOR": NARRATOR, "NARRATOR_MALE": NARRATOR_MALE}
+TRAILER_NARRATOR = {
+    "name": "TRAILER_NARRATOR",
+    "voice_id": os.getenv("TRAILER_NARRATOR_VOICE_ID") or DEFAULT_VOICE_IDS["TRAILER_THRILLER"],
+    "model_id": "eleven_multilingual_v2",
+    "voice_settings": {
+        "stability": 0.64,
+        "similarity_boost": 0.76,
+        "style": 0.28,
+        "use_speaker_boost": True,
+    },
+    "color": "#ffffff",
+}
+
+ALL_VOICES = {
+    **CHARACTERS,
+    "NARRATOR": NARRATOR,
+    "NARRATOR_MALE": NARRATOR_MALE,
+    "TRAILER_NARRATOR": TRAILER_NARRATOR,
+}

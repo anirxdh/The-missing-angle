@@ -8,11 +8,24 @@
       "atmosphere": "party_night",
       "characters_present": [],
       "pause_at": 99,
-      "auto_advance": "intro",
+      "auto_advance": "security_cam",
+      "minimum_duration": 14,
       "narrator_character": "NARRATOR",
       "question": null,
       "branches": {},
-      "narration": "This already happened. Daniel enters the stairwell at 10:57. Three minutes later, the night starts lying."
+      "narration": "It starts like any other night. <break time=\"0.8s\" /> Music too loud. Faces moving through the dark. <break time=\"1.1s\" /> Then, somewhere beyond the party, everything changes."
+    },
+    "security_cam": {
+      "id": "security_cam",
+      "title": "The Missing Moment",
+      "atmosphere": "security_cam",
+      "characters_present": [],
+      "pause_at": 99,
+      "auto_advance": "sara_calls",
+      "narrator_character": "NARRATOR",
+      "question": null,
+      "branches": {},
+      "narration": "By morning, there is a missing moment. <break time=\"0.9s\" /> A blurred landing. A silence nobody can explain. <break time=\"1.1s\" /> The camera caught enough to accuse someone, but not enough to be certain."
     },
     "intro": {
       "id": "intro",
@@ -23,13 +36,15 @@
       "auto_advance": "sara_calls",
       "question": null,
       "branches": {},
-      "narration": "Morning edits the night into something simple: Daniel fell. But the footage keeps catching on Sara, frozen near the stairwell, right before the sound."
+      "narration": null
     },
     "sara_calls": {
       "id": "sara_calls",
       "title": "Sara's Lie",
       "atmosphere": "sara_calls",
-      "characters_present": ["SARA"],
+      "characters_present": [
+        "SARA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "SARA",
@@ -45,13 +60,16 @@
           "next": "sara_comes_over"
         }
       },
-      "narration": "Sara calls before the police do. The film pauses here. She sounds calm. She practiced this."
+      "narration": "Sara calls before the police do. <break time=\"0.7s\" /> Her voice is steady. Too steady. <break time=\"0.8s\" /> She has already decided what to say.",
+      "decision_prompt": "Sara is still on the line. Do we protect the lie, or question it?"
     },
     "detective_arrives": {
       "id": "detective_arrives",
       "title": "Cole's Camera",
       "atmosphere": "detective_arrives",
-      "characters_present": ["COLE"],
+      "characters_present": [
+        "COLE"
+      ],
       "pause_at": 6,
       "question": {
         "character": "COLE",
@@ -67,13 +85,16 @@
           "next": "ending_witness"
         }
       },
-      "narration": "Cole does not raise his voice. He never has to. He lets the camera make the room smaller."
+      "narration": "Cole does not raise his voice. He never has to. He lets the camera make the room smaller.",
+      "decision_prompt": "The footage is ready. Do we hide the camera, or show what it saw?"
     },
     "cole_pushes": {
       "id": "cole_pushes",
       "title": "The Evidence",
       "atmosphere": "cole_pushes",
-      "characters_present": ["COLE"],
+      "characters_present": [
+        "COLE"
+      ],
       "pause_at": 6,
       "question": {
         "character": "COLE",
@@ -89,13 +110,16 @@
           "next": "cole_follows_up"
         }
       },
-      "narration": "Four seconds. Rewind. Four seconds again. The scene is daring you to mistake motion for intent."
+      "narration": "Four seconds. Rewind. Four seconds again. The scene is daring you to mistake motion for intent.",
+      "decision_prompt": "Cole rewinds the frame. Do we cut away, or look closer?"
     },
     "cole_follows_up": {
       "id": "cole_follows_up",
       "title": "Frame 1432",
       "atmosphere": "cole_follows_up",
-      "characters_present": ["COLE"],
+      "characters_present": [
+        "COLE"
+      ],
       "pause_at": 6,
       "question": {
         "character": "COLE",
@@ -111,13 +135,16 @@
           "next": "ending_witness_doubt"
         }
       },
-      "narration": "The frame holds. A hand, a shoulder, the edge of someone else just outside the crop. One inch changes the story."
+      "narration": "The frame holds. A hand, a shoulder, the edge of someone else just outside the crop. One inch changes the story.",
+      "decision_prompt": "The missing edge is visible. Do we reveal the full frame, or leave doubt?"
     },
     "sara_comes_over": {
       "id": "sara_comes_over",
       "title": "Sara's Version",
       "atmosphere": "sara_comes_over",
-      "characters_present": ["SARA"],
+      "characters_present": [
+        "SARA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "SARA",
@@ -133,13 +160,16 @@
           "next": "ending_alone"
         }
       },
-      "narration": "Sara does not defend herself. She points to the corner of the image, where the movie has been hiding its second story."
+      "narration": "Sara does not defend herself. She points to a corner of the frame, where the second version of the story has been waiting.",
+      "decision_prompt": "Sara points offscreen. Do we rewind for her, or cut to police?"
     },
     "maya_calls": {
       "id": "maya_calls",
       "title": "Maya's Angle",
       "atmosphere": "maya_calls",
-      "characters_present": ["MAYA"],
+      "characters_present": [
+        "MAYA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "MAYA",
@@ -155,13 +185,16 @@
           "next": "sara_reveals"
         }
       },
-      "narration": "The missing angle has a voice now. Not Sara's. Maya's."
+      "narration": "The missing angle has a voice now. Not Sara's. Maya's.",
+      "decision_prompt": "Maya enters the story. Do we bring her into frame, or stay with Sara?"
     },
     "sara_reveals": {
       "id": "sara_reveals",
       "title": "The Fall",
       "atmosphere": "sara_reveals",
-      "characters_present": ["SARA"],
+      "characters_present": [
+        "SARA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "SARA",
@@ -177,13 +210,16 @@
           "next": "ending_betrayal"
         }
       },
-      "narration": "The fall finally plays without a cut. Somehow, that makes it less certain."
+      "narration": "The fall finally plays without a cut. Somehow, that makes it less certain.",
+      "decision_prompt": "The fall is finally clear. Do we believe the reach, or read it as murder?"
     },
     "ending_complicit": {
       "id": "ending_complicit",
       "title": "COMPLICIT",
       "atmosphere": "ending_complicit",
-      "characters_present": ["SARA"],
+      "characters_present": [
+        "SARA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "SARA",
@@ -198,7 +234,9 @@
       "id": "ending_witness",
       "title": "THE CLEAN CUT",
       "atmosphere": "ending_witness",
-      "characters_present": ["COLE"],
+      "characters_present": [
+        "COLE"
+      ],
       "pause_at": 6,
       "question": {
         "character": "COLE",
@@ -213,7 +251,9 @@
       "id": "ending_witness_broken",
       "title": "TOO LATE",
       "atmosphere": "ending_witness_broken",
-      "characters_present": ["COLE"],
+      "characters_present": [
+        "COLE"
+      ],
       "pause_at": 6,
       "question": {
         "character": "COLE",
@@ -228,7 +268,9 @@
       "id": "ending_witness_doubt",
       "title": "SHADOW OF DOUBT",
       "atmosphere": "ending_witness_doubt",
-      "characters_present": ["COLE"],
+      "characters_present": [
+        "COLE"
+      ],
       "pause_at": 6,
       "question": {
         "character": "COLE",
@@ -243,7 +285,9 @@
       "id": "ending_truth",
       "title": "TRUTH",
       "atmosphere": "ending_truth",
-      "characters_present": ["SARA"],
+      "characters_present": [
+        "SARA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "SARA",
@@ -258,7 +302,9 @@
       "id": "ending_truth_together",
       "title": "UNITED",
       "atmosphere": "ending_truth_together",
-      "characters_present": ["MAYA"],
+      "characters_present": [
+        "MAYA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "MAYA",
@@ -273,7 +319,9 @@
       "id": "ending_betrayal",
       "title": "BETRAYED",
       "atmosphere": "ending_betrayal",
-      "characters_present": ["SARA"],
+      "characters_present": [
+        "SARA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "SARA",
@@ -288,7 +336,9 @@
       "id": "ending_alone",
       "title": "ALONE",
       "atmosphere": "ending_alone",
-      "characters_present": ["SARA"],
+      "characters_present": [
+        "SARA"
+      ],
       "pause_at": 6,
       "question": {
         "character": "SARA",

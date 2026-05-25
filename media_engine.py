@@ -530,6 +530,7 @@ async def generate_lipsync(
 
 SCENE_MUSIC_PROMPTS: dict[str, str] = {
     "party_night":          "upbeat indie party, people talking, bass beat, warm crowded apartment, lively and alive",
+    "security_cam":         "cold surveillance ambient, low electronic hum, digital tension, grainy static noise",
     "intro":                "tense quiet thriller underscore, sparse piano, morning dread, low drone, unease",
     "sara_calls":           "anxious strings, desperate phone call energy, heart-pounding subtle pulse, fear",
     "detective_arrives":    "cold noir investigative underscore, low brass, measured slow tension, detective atmosphere",
@@ -547,6 +548,12 @@ SCENE_MUSIC_PROMPTS: dict[str, str] = {
     "ending_betrayal":      "cold sparse piano, betrayal theme, a friendship ended, courtroom silence and doubt",
     "ending_alone":         "lonely ambient drone, a phone unanswered, emptiness, the night after everything",
 }
+
+TRAILER_MUSIC_PROMPT = (
+    "cinematic suspense trailer underscore, low pulsing synth, distant piano notes, "
+    "slow investigative thriller tension, dark rooftop party aftermath, subtle rise, "
+    "no vocals, no dialogue, no percussion hits overpowering narration"
+)
 
 
 async def generate_scene_music(atmosphere: str) -> Optional[pathlib.Path]:
@@ -588,3 +595,47 @@ async def generate_scene_music(atmosphere: str) -> Optional[pathlib.Path]:
     except Exception as e:
         print(f"[Music] Failed for {atmosphere}: {e}")
     return None
+
+
+async def generate_trailer_music() -> Optional[pathlib.Path]:
+    """
+    Generate the dedicated trailer suspense bed using ElevenLabs sound generation.
+    Saves to static/music/trailer_suspense.mp3 and falls back to intro music if generation is unavailable.
+    """
+    out_path = MUSIC_DIR / "trailer_suspense.mp3"
+    if out_path.exists():
+        return out_path
+
+    if _ON_VERCEL:
+        fallback = MUSIC_DIR / "intro.mp3"
+        return fallback if fallback.exists() else None
+
+    if not ELEVEN_KEY():
+        fallback = MUSIC_DIR / "intro.mp3"
+        return fallback if fallback.exists() else None
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                f"{ELEVEN_BASE}/sound-generation",
+                headers={"xi-api-key": ELEVEN_KEY(), "Content-Type": "application/json"},
+                json={
+                    "text": TRAILER_MUSIC_PROMPT,
+                    "duration_seconds": 30,
+                    "prompt_influence": 0.55,
+                },
+            )
+            if resp.status_code != 200:
+                print(f"[Music] ElevenLabs trailer music failed: {resp.text[:200]}")
+                fallback = MUSIC_DIR / "intro.mp3"
+                return fallback if fallback.exists() else None
+
+            out_path.write_bytes(resp.content)
+            print(f"[Music] ✓ trailer_suspense ({len(resp.content)//1024}KB)")
+            return out_path
+
+    except Exception as e:
+        print(f"[Music] Trailer music failed: {e}")
+
+    fallback = MUSIC_DIR / "intro.mp3"
+    return fallback if fallback.exists() else None

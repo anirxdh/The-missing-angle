@@ -14,13 +14,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from groq import AsyncGroq
 from pydantic import BaseModel
 
 load_dotenv()
 
 from story_engine import StoryEngine, SCENES
 from characters import CHARACTERS, ALL_VOICES
-from media_engine import generate_scene_image, generate_scene_music, SCENE_MUSIC_PROMPTS
+from media_engine import generate_scene_image, generate_scene_music, generate_trailer_music, SCENE_MUSIC_PROMPTS
 
 ROOT = pathlib.Path(__file__).resolve().parent
 ON_VERCEL = bool(os.getenv("VERCEL"))
@@ -30,7 +31,42 @@ engine = StoryEngine()
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_BASE    = "https://api.elevenlabs.io/v1"
+GROQ_API_KEY       = os.getenv("GROQ_API_KEY", "")
 PRUNA_ENABLED      = bool(os.getenv("PRUNA_API_KEY", ""))
+_groq_client: Optional[AsyncGroq] = None
+
+_trailer_cache: dict = {}
+
+TRAILER_SCRIPT = (
+    "Everyone remembers the fall. <break time=\"1.4s\" /> "
+    "No one remembers the same moment. <break time=\"1.2s\" /> "
+    "One frame was missed. <break time=\"1.1s\" /> "
+    "One silence was kept. <break time=\"1.4s\" /> "
+    "And before the night is over... <break time=\"1.0s\" /> "
+    "someone will decide what the truth looks like. <break time=\"1.5s\" /> "
+    "The Missing Angle."
+)
+
+
+CHOICE_DIRECTOR_PROMPT = """You are the voice choice director for an interactive film called "The Missing Angle".
+
+The viewer is speaking while the movie is paused on a two-option decision.
+Your job is to choose exactly one visible option, or null if the viewer's words do not map to either option.
+
+Rules:
+- Never invent a new branch.
+- Never continue the story.
+- Prefer semantic intent over exact wording.
+- Handle negation carefully: "don't trust Sara" is not the same as "trust Sara".
+- Return only JSON.
+
+Respond with:
+{
+  "choice_key": "<one of the provided keys, or null>",
+  "confidence": <0.0 to 1.0>,
+  "confirmation": "<short cinematic phrase, max 8 words>"
+}
+"""
 
 
 # ── Startup ────────────────────────────────────────────────────────────────
@@ -43,12 +79,23 @@ async def startup():
         return
 
     asyncio.create_task(_pregen_all_scene_music())
+    asyncio.create_task(_pregen_trailer_tts())
 
     if not PRUNA_ENABLED:
         print("[Media] No PRUNA_API_KEY — image generation skipped")
         return
 
     asyncio.create_task(_pregen_all_scene_images())
+
+
+async def _pregen_trailer_tts():
+    """Pre-generate trailer narration TTS and cache it in memory."""
+    try:
+        audio = await tts(TRAILER_SCRIPT, "NARRATOR")
+        _trailer_cache["audio_b64"] = base64.b64encode(audio).decode()
+        print("[Trailer] TTS pre-generated and cached")
+    except Exception as e:
+        print(f"[Trailer] TTS pre-gen failed: {e}")
 
 
 async def _pregen_all_scene_music():
@@ -219,7 +266,9 @@ async def _send_scene_start(sink: SessionSink, scene: dict, sid: Optional[str] =
                 "audio_b64": audio_b64,
             })
         elapsed = time.time() - t0
-        adv_delay = max(0.5, narration_secs + 1.0 - elapsed)
+        minimum_secs = float(scene.get("minimum_duration", 0))
+        # +2.5s accounts for: 1s client video-load delay + 0.5s crossfade + 1s safety margin
+        adv_delay = max(0.5, narration_secs + 2.5 - elapsed, minimum_secs - elapsed)
         sink.schedule_auto_advance(auto_next, adv_delay, sid or "")
         return
 
@@ -238,18 +287,21 @@ async def _send_scene_start(sink: SessionSink, scene: dict, sid: Optional[str] =
     if question:
         character = question["character"]
         text      = question["text"]
+        decision_prompt = _decision_prompt(scene)
         await sink.send({
             "type":             "scene_question",
             "character":        character,
             "text":             text,
             "audio_b64":        None,
+            "decision_prompt":  decision_prompt,
+            "decision_audio_b64": None,
             "pause_at":         scene.get("pause_at", 6),
             "options":          _branch_options(scene),
         })
         if sink.is_http:
-            await _send_question_audio(sink, character, text)
+            await _send_question_audio(sink, character, text, decision_prompt)
         else:
-            asyncio.create_task(_send_question_audio(sink, character, text))
+            asyncio.create_task(_send_question_audio(sink, character, text, decision_prompt))
 
 
 async def _auto_advance(sink: SessionSink, next_scene: dict, delay: float, sid: Optional[str] = None):
@@ -257,17 +309,37 @@ async def _auto_advance(sink: SessionSink, next_scene: dict, delay: float, sid: 
     await _send_scene_start(sink, next_scene, sid)
 
 
-async def _send_question_audio(sink: SessionSink, character: str, text: str):
+async def _send_question_audio(sink: SessionSink, character: str, text: str, decision_prompt: str):
+    question_audio_b64 = None
+    decision_audio_b64 = None
     try:
-        audio = await tts(text, character)
-        await sink.send({
-            "type":      "scene_question_audio",
-            "character": character,
-            "text":      text,
-            "audio_b64": base64.b64encode(audio).decode(),
-        })
+        question_audio, decision_audio = await asyncio.gather(
+            tts(text, character),
+            tts(decision_prompt, "NARRATOR"),
+        )
+        question_audio_b64 = base64.b64encode(question_audio).decode()
+        decision_audio_b64 = base64.b64encode(decision_audio).decode()
     except Exception as e:
-        print(f"[TTS] {character} question failed: {e}")
+        print(f"[TTS] {character} decision beat failed: {e}")
+        if not question_audio_b64:
+            try:
+                question_audio_b64 = base64.b64encode(await tts(text, character)).decode()
+            except Exception as q_err:
+                print(f"[TTS] {character} question failed: {q_err}")
+        if not decision_audio_b64:
+            try:
+                decision_audio_b64 = base64.b64encode(await tts(decision_prompt, "NARRATOR")).decode()
+            except Exception as d_err:
+                print(f"[TTS] Narrator decision prompt failed: {d_err}")
+
+    await sink.send({
+        "type":      "scene_question_audio",
+        "character": character,
+        "text":      text,
+        "audio_b64": question_audio_b64,
+        "decision_prompt": decision_prompt,
+        "decision_audio_b64": decision_audio_b64,
+    })
 
 
 async def transcribe_choice_audio(audio: bytes) -> str:
@@ -305,7 +377,9 @@ async def _handle_voice_choice(sink: SessionSink, sid: str, audio: bytes):
         return
 
     await sink.send({"type": "transcript", "text": transcript})
-    branch_key = _match_branch_key(scene, transcript)
+    branch_key = await _match_branch_key_with_groq(scene, transcript)
+    if not branch_key:
+        branch_key = _match_branch_key(scene, transcript)
     if not branch_key:
         await sink.send({"type": "voice_no_match", "message": "No matching choice"})
         return
@@ -346,6 +420,62 @@ def _branch_options(scene: dict) -> list:
         display = label.split("/")[0].strip().title()
         options.append({"key": key, "display": display})
     return options[:2]  # max 2 options
+
+
+def _decision_prompt(scene: dict) -> str:
+    return scene.get("decision_prompt") or "The film holds. Which angle should we follow?"
+
+
+def _groq() -> Optional[AsyncGroq]:
+    global _groq_client
+    if not GROQ_API_KEY:
+        return None
+    if _groq_client is None:
+        _groq_client = AsyncGroq(api_key=GROQ_API_KEY)
+    return _groq_client
+
+
+async def _match_branch_key_with_groq(scene: dict, transcript: str) -> Optional[str]:
+    client = _groq()
+    branches = scene.get("branches", {})
+    if not client or not branches:
+        return None
+
+    options = {
+        key: {
+            "display": branch.get("label", key).split("/")[0].strip().title(),
+            "semantic_labels": [p.strip() for p in branch.get("label", key).split("/")],
+        }
+        for key, branch in branches.items()
+    }
+
+    try:
+        response = await client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": CHOICE_DIRECTOR_PROMPT},
+                {
+                    "role": "user",
+                    "content": json.dumps({
+                        "scene_id": scene.get("id"),
+                        "scene_title": scene.get("title"),
+                        "visible_options": options,
+                        "viewer_said": transcript,
+                    }),
+                },
+            ],
+            temperature=0.1,
+            max_tokens=160,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(response.choices[0].message.content)
+        choice_key = data.get("choice_key")
+        confidence = float(data.get("confidence") or 0)
+        if choice_key in branches and confidence >= 0.55:
+            return choice_key
+    except Exception as e:
+        print(f"[Groq] choice match failed: {e}")
+    return None
 
 
 def _match_branch_key(scene: dict, transcript: str) -> Optional[str]:
@@ -422,6 +552,7 @@ def _scene_payload(scene: dict) -> dict:
         "is_ending":          scene.get("is_ending", False),
         "ending_type":        scene.get("ending_type", ""),
         "has_narration":      bool(scene.get("narration") and _should_narrate(scene)),
+        "auto_advance":       scene.get("auto_advance") or None,
     }
 
 
@@ -435,11 +566,43 @@ def _should_narrate(scene: dict) -> bool:
 async def health():
     return {"status": "ok",
             "elevenlabs": bool(ELEVENLABS_API_KEY),
+            "groq":       bool(GROQ_API_KEY),
             "pruna":      PRUNA_ENABLED}
 
 @app.get("/api/scenes")
 async def get_scenes():
     return {"scenes": list(SCENES.keys())}
+
+
+@app.get("/api/trailer")
+async def get_trailer():
+    audio_b64 = None
+    music_url = None
+    audio_b64 = _trailer_cache.get("audio_b64")
+    if not audio_b64:
+        try:
+            audio_b64 = base64.b64encode(await tts(TRAILER_SCRIPT, "NARRATOR")).decode()
+            _trailer_cache["audio_b64"] = audio_b64
+        except Exception as e:
+            print(f"[TTS] Trailer narration failed: {e}")
+    try:
+        music_path = await generate_trailer_music()
+        if music_path:
+            music_url = f"/static/music/{music_path.name}"
+    except Exception as e:
+        print(f"[Music] Trailer music failed: {e}")
+    return {
+        "text": TRAILER_SCRIPT,
+        "audio_b64": audio_b64,
+        "music_url": music_url,
+        "video_urls": [
+            "/static/trailer/rooftop-party-to-crime-scene.mp4",
+            "/static/trailer/Woman_on_video_call_whispers_202605231532.mp4",
+            "/static/trailer/02_cole_footage.mp4",
+            "/static/trailer/03_missing_angle.mp4",
+            "/static/trailer/Three_character_portraits_fade_202605241441.mp4",
+        ],
+    }
 
 
 class SessionIdBody(BaseModel):

@@ -26,6 +26,10 @@ bgMusic.volume      = 0;
 let bgMusicAtm      = null;
 let bgMusicReady    = false;
 
+const trailerMusic  = new Audio();
+trailerMusic.loop   = true;
+trailerMusic.volume = 0;
+
 async function setSceneMusic(atmosphere){
   if(!bgMusicReady || bgMusicAtm === atmosphere) return;
   const url = `/static/music/${atmosphere}.mp3`;
@@ -37,8 +41,18 @@ async function setSceneMusic(atmosphere){
     bgMusic.src = url;
     bgMusic.load();
     bgMusic.play().catch(()=>{});
-    _fadeMusic(0.18);
+    _fadeMusic(0.22);
   } catch(e){}
+}
+
+function startSceneMusicFromClick(atmosphere){
+  bgMusicAtm = atmosphere;
+  bgMusic.src = `/static/music/${atmosphere}.mp3`;
+  bgMusic.loop = true;
+  bgMusic.muted = false;
+  bgMusic.volume = 0.22;
+  bgMusic.load();
+  bgMusic.play().catch(e=> console.error("scene music play:", e));
 }
 
 function _fadeMusic(target){
@@ -53,6 +67,30 @@ function _fadeMusic(target){
   });
 }
 
+function playTrailerMusic(url){
+  if(!url) return Promise.resolve();
+  if(trailerMusic.src.endsWith(url) && !trailerMusic.paused) return Promise.resolve();
+  return new Promise(resolve=>{
+    trailerMusic.pause();
+    trailerMusic.src = url;
+    trailerMusic.loop = true;
+    trailerMusic.muted = false;
+    trailerMusic.volume = 0.45;
+    trailerMusic.oncanplay = resolve;
+    trailerMusic.onerror = resolve;
+    trailerMusic.load();
+    trailerMusic.play().then(resolve).catch(resolve);
+    setTimeout(resolve, 900);
+  });
+}
+
+function stopTrailerMusic(){
+  trailerMusic.pause();
+  trailerMusic.removeAttribute("src");
+  trailerMusic.load();
+  trailerMusic.volume = 0;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────
 let ws              = null;
 let useHttpGame     = false;
@@ -65,11 +103,15 @@ let activeSlot      = "a";
 let pauseTimer      = null;
 let narrationDone   = false;
 let sceneStartedAt  = 0;
+let sceneVisualReady = false;
+let queuedMessages  = [];
 let isRecording     = false;
 let mediaRecorder   = null;
 let audioChunks     = [];
 let audioCtx        = null;   // single persistent AudioContext, unlocked on splash click
 let audioUnlocked   = false;
+let trailerPlaying  = false;
+let _currentAudio   = null;
 
 // ── DOM ───────────────────────────────────────────────────────────────────
 const sceneBg        = document.getElementById("scene-bg");
@@ -85,6 +127,18 @@ const choiceBtnA     = document.getElementById("choice-a");
 const choiceBtnB     = document.getElementById("choice-b");
 const voiceChoiceBtn = document.getElementById("voice-choice-btn");
 const choiceHint     = document.getElementById("choice-hint");
+const splash         = document.getElementById("splash");
+const trailerBtn     = document.getElementById("trailer-btn");
+const trailerVideo   = document.getElementById("trailer-video");
+const trailerControls   = document.getElementById("trailer-controls");
+const trailerExitBtn    = document.getElementById("trailer-exit-btn");
+const trailerReplayBtn  = document.getElementById("trailer-replay-btn");
+const trailerFfBtn      = document.getElementById("trailer-ff-btn");
+const trailerCaptions   = document.getElementById("trailer-captions");
+const trailerTitleCard  = document.getElementById("trailer-title-card");
+const ttcEyebrow        = document.getElementById("ttc-eyebrow");
+const ttcTitle          = document.getElementById("ttc-title");
+const ttcSub            = document.getElementById("ttc-sub");
 
 // ── Canvas particles ──────────────────────────────────────────────────────
 const ctx2d = sceneCanvas.getContext("2d");
@@ -208,8 +262,8 @@ function sendBlob(b){
 function handle(msg){
   switch(msg.type){
     case "scene_start":     onSceneStart(msg.scene);   break;
-    case "scene_narration": onSceneNarration(msg);     break;
-    case "scene_question":  onSceneQuestion(msg);      break;
+    case "scene_narration": runWhenVisualReady(msg);   break;
+    case "scene_question":  runWhenVisualReady(msg);   break;
     case "scene_question_audio": onSceneQuestionAudio(msg); break;
     case "transcript":      showChoiceHint(`heard: ${msg.text}`); break;
     case "voice_no_match":  showChoiceHint("try one of the two choices"); break;
@@ -219,8 +273,14 @@ function handle(msg){
 
 // ── Scene start ───────────────────────────────────────────────────────────
 function onSceneStart(scene){
+  // For auto-advance transitions the server waits for narration to finish naturally.
+  // Only cut audio for user-initiated choices (interactive → next scene).
+  if(!currentScene?.auto_advance && _currentAudio){ _currentAudio.pause(); _currentAudio = null; }
+  _narrationAbort = true;
   currentScene = scene;
-  sceneStartedAt = Date.now();
+  sceneStartedAt = 0;
+  sceneVisualReady = false;
+  queuedMessages = [];
   hasPaused    = false;
   pendingQ     = null;
   narrationDone = !scene.has_narration;
@@ -231,24 +291,53 @@ function onSceneStart(scene){
   if(pauseTimer){ clearTimeout(pauseTimer); pauseTimer=null; }
 
   const atm = scene.atmosphere || "default";
-  crossfadeVideo(`/static/scenes/${atm}.mp4`);
+  const shouldLoop = !scene.auto_advance;
+  crossfadeVideo(`/static/scenes/${atm}.mp4?v=3`, shouldLoop);
 
-  setSceneMusic(atm);
+  // When first interactive scene loads, fade out trailer suspense and switch to scene BGM
+  if(!scene.auto_advance){
+    stopTrailerMusic();
+    setSceneMusic(atm);
+  }
+}
+
+function runWhenVisualReady(msg){
+  if(!sceneVisualReady){
+    queuedMessages.push(msg);
+    return;
+  }
+  handleSceneTimedMessage(msg);
+}
+
+function flushQueuedMessages(){
+  const pending = queuedMessages.splice(0);
+  pending.forEach(handleSceneTimedMessage);
+}
+
+function handleSceneTimedMessage(msg){
+  switch(msg.type){
+    case "scene_narration": onSceneNarration(msg); break;
+    case "scene_question":  onSceneQuestion(msg);  break;
+  }
 }
 
 // ── Narration — typewriter, one line at a time, follows the voice ─────────
+let _narrationAbort = false;
+
 async function onSceneNarration(msg){
+  _narrationAbort = false;
   charLabel.textContent = "";
   subtitleText.classList.add("narration");
 
-  await Promise.all([
-    playVoice(msg.text, msg.audio_b64, "NARRATOR"),
-    animateNarration(msg.text, msg.audio_b64),
-  ]);
+  // Animation runs alongside audio but we only wait for audio.
+  // When audio ends we abort the animation and hand off immediately.
+  animateNarration(msg.text, msg.audio_b64);
+  await playVoice(msg.text, msg.audio_b64, "NARRATOR");
 
+  _narrationAbort = true;
   subtitleText.style.opacity = "0";
   subtitleText.classList.remove("narration", "typing");
-  await sleep(350);
+  await sleep(80);
   subtitleText.textContent = "";
   subtitleText.style.opacity = "1";
 
@@ -257,13 +346,14 @@ async function onSceneNarration(msg){
 }
 
 async function animateNarration(text, audio_b64){
+  const displayText = cleanSpeechText(text);
   // Estimate total audio duration from MP3 base64 size (128 kbps → 16000 B/s)
   const totalMs = audio_b64
     ? (audio_b64.length * 0.75 / 16000) * 1000
-    : voiceDuration(text, "NARRATOR");
+    : voiceDuration(displayText, "NARRATOR");
 
   // Split at sentence boundaries — keeps punctuation with the phrase
-  const phrases = text
+  const phrases = displayText
     .replace(/([.!?])\s+/g, "$1\n")
     .replace(/\.\.\.\s*/g, "...\n")
     .replace(/—\s*/g, "—\n")
@@ -274,11 +364,14 @@ async function animateNarration(text, audio_b64){
   const msPerPhrase = totalMs / phrases.length;
 
   for(const phrase of phrases){
+    if(_narrationAbort) break;
     subtitleText.style.opacity = "1";
     subtitleText.classList.add("typing");
     await typewriter(phrase, Math.min(msPerPhrase * 0.55, 2200));
+    if(_narrationAbort) break;
     subtitleText.classList.remove("typing");
     await sleep(Math.max(300, msPerPhrase * 0.35));
+    if(_narrationAbort) break;
     subtitleText.style.opacity = "0";
     await sleep(220);
     subtitleText.textContent = "";
@@ -294,6 +387,13 @@ async function typewriter(text, durationMs){
   }
 }
 
+function cleanSpeechText(text){
+  return (text || "")
+    .replace(/<break\s+time="[^"]+"\s*\/>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // ── Scene question ────────────────────────────────────────────────────────
 function onSceneQuestion(msg){
   pendingQ = msg;
@@ -305,35 +405,48 @@ function onSceneQuestionAudio(msg){
   if(!pendingQ) return;
   if(pendingQ.character !== msg.character || pendingQ.text !== msg.text) return;
   pendingQ.audio_b64 = msg.audio_b64;
+  pendingQ.decision_prompt = msg.decision_prompt || pendingQ.decision_prompt;
+  pendingQ.decision_audio_b64 = msg.decision_audio_b64;
 }
 
-// Wall-clock pause so looping 8s videos hit the mark
+// Pause against actual video playback time so narration and visuals stay aligned.
 function schedulePause(pauseAt){
   if(hasPaused) return;
   if(pauseTimer){ clearTimeout(pauseTimer); }
-  const elapsed = Date.now() - sceneStartedAt;
-  const delay = Math.max(0, pauseAt * 1000 - elapsed);
-  pauseTimer = setTimeout(()=>{
+  const video = activeVid();
+  const tick = ()=>{
     if(!hasPaused){
-      hasPaused = true;
-      activeVid().pause();
-      fireQuestion();
+      if(video.currentTime >= pauseAt){
+        hasPaused = true;
+        video.pause();
+        fireQuestion();
+        return;
+      }
+      pauseTimer = setTimeout(tick, 80);
     }
-  }, delay);
+  };
+  tick();
 }
 
 async function fireQuestion(){
   const q = pendingQ; if(!q) return;
 
+  await waitForAudioKey(q, "audio_b64", 4000);
   showLine(q.character, q.text);
-
   await playVoice(q.text, q.audio_b64, q.character);
 
-  // Show choice buttons if options exist
+  await waitForAudioKey(q, "decision_audio_b64", 2500);
+  const decisionPrompt = q.decision_prompt || "The film holds. Which angle should we follow?";
+  showLine("NARRATOR", decisionPrompt);
+  await playVoice(decisionPrompt, q.decision_audio_b64, "NARRATOR");
+
   const opts = q.options || [];
-  if(opts.length >= 2){
-    showChoices(opts);
-  }
+  if(opts.length >= 2) showChoices(opts);
+}
+
+async function waitForAudioKey(q, key, maxWaitMs){
+  const start = Date.now();
+  while(!q[key] && Date.now() - start < maxWaitMs) await sleep(60);
 }
 
 // ── Choice buttons ────────────────────────────────────────────────────────
@@ -345,7 +458,7 @@ function showChoices(opts){
   choiceOverlay.classList.add("visible");
   voiceChoiceBtn.textContent = "Speak Choice";
   voiceChoiceBtn.classList.add("visible");
-  showChoiceHint("say a sentence, or click a choice");
+  showChoiceHint("say a sentence, or select a cut");
 }
 
 function hideChoices(){
@@ -409,20 +522,43 @@ function showChoiceHint(text){
 }
 
 // ── Video crossfade ───────────────────────────────────────────────────────
-function crossfadeVideo(url){
+let _crossfadeTimer = null;
+
+function crossfadeVideo(url, loop=true){
+  if(_crossfadeTimer){ clearTimeout(_crossfadeTimer); _crossfadeTimer = null; }
+
   const next = activeSlot==="a" ? vidB : vidA;
   const prev = activeSlot==="a" ? vidA : vidB;
-  next.loop = true;  // always loop scene videos
+  const slot = activeSlot;
+
+  // cancel any pending listener on this element
+  if(next._onReady){ next.removeEventListener("canplay", next._onReady); next._onReady = null; }
+
+  next.loop = loop;
   muteSceneVideo(next);
-  next.src = url; next.load();
-  next.oncanplay = ()=>{
+  next.src = url;
+  next.load();
+
+  let fired = false;
+  const onReady = ()=>{
+    if(fired) return; fired = true;
+    if(_crossfadeTimer){ clearTimeout(_crossfadeTimer); _crossfadeTimer = null; }
+    next.removeEventListener("canplay", onReady);
+    next._onReady = null;
     muteSceneVideo(next);
+    next.currentTime = 0;
     next.play().catch(()=>{});
     next.classList.add("active");
     prev.classList.remove("active");
-    activeSlot = activeSlot==="a" ? "b" : "a";
-    setTimeout(()=>{ prev.src=""; }, 1500);
+    activeSlot = slot === "a" ? "b" : "a";
+    sceneStartedAt = Date.now();
+    sceneVisualReady = true;
+    flushQueuedMessages();
   };
+
+  next._onReady = onReady;
+  next.addEventListener("canplay", onReady, { once: true });
+  _crossfadeTimer = setTimeout(onReady, 3000);
 }
 function activeVid(){ return activeSlot==="a" ? vidA : vidB; }
 
@@ -472,7 +608,7 @@ document.getElementById("ending-replay")?.addEventListener("click", ()=>{
 // ── Audio — ElevenLabs first, browser speech fallback ─────────────────────
 async function playVoice(text, b64, character){
   if(b64 && await playB64(b64)) return;
-  await sleep(voiceDuration(text, character));
+  await sleep(voiceDuration(cleanSpeechText(text), character));
 }
 
 function playB64(b64){
@@ -484,8 +620,10 @@ function playB64(b64){
       const audio = new Audio(url);
       audio.volume = 1;
       audio.muted = false;
-      audio.onended = ()=>{ URL.revokeObjectURL(url); res(true); };
-      audio.onerror = ()=>{ URL.revokeObjectURL(url); res(false); };
+      if(_currentAudio){ _currentAudio.pause(); }
+      _currentAudio = audio;
+      audio.onended = ()=>{ if(_currentAudio===audio) _currentAudio=null; URL.revokeObjectURL(url); res(true); };
+      audio.onerror = ()=>{ if(_currentAudio===audio) _currentAudio=null; URL.revokeObjectURL(url); res(false); };
       await audio.play();
     } catch(e){
       if(url) URL.revokeObjectURL(url);
@@ -501,8 +639,7 @@ function voiceDuration(text, character){
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 // ── Boot — wait for user click to unlock audio autoplay ───────────────────
-document.getElementById("splash-btn").addEventListener("click", async ()=>{
-  // Create and keep the AudioContext alive for the session
+async function unlockAudioContext(){
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if(AudioCtx){
@@ -512,11 +649,170 @@ document.getElementById("splash-btn").addEventListener("click", async ()=>{
   } catch(e){}
   unlockMediaAudio();
   bgMusicReady = true;
-  crossfadeVideo("/static/scenes/party_night.mp4");
+}
 
-  const splash = document.getElementById("splash");
+document.getElementById("splash-btn").addEventListener("click", async ()=>{
+  unlockAudioContext();
+  stopTrailerMusic();
+  playTrailerMusic("/static/music/trailer_suspense.mp3");
+  crossfadeVideo("/static/scenes/party_night.mp4?v=3");
+
   splash.classList.add("hidden");
   setTimeout(()=> splash.remove(), 900);
 
   connect();
 });
+
+let trailerAbort = false;
+
+trailerBtn?.addEventListener("click", playTrailer);
+trailerExitBtn?.addEventListener("click", ()=>{
+  trailerAbort = true;
+  trailerVideo.pause();
+  _hideTrailerTitleCard();
+  splash.classList.remove("trailer-playing");
+  stopTrailerMusic();
+  trailerBtn.textContent = "WATCH TRAILER";
+  trailerPlaying = false;
+  subtitleText.classList.remove("narration","typing");
+  clearSubtitle();
+  if(!splash.classList.contains("hidden")) crossfadeVideo("/static/scenes/party_night.mp4?v=3");
+});
+
+// Preload first trailer video so it's buffered before button click
+(function preloadFirstTrailerVideo(){
+  const v = trailerVideo;
+  v.src     = "/static/trailer/rooftop-party-to-crime-scene.mp4";
+  v.preload = "auto";
+  v.muted   = true;
+  v.load();
+})();
+
+// Pre-fetch trailer API on page load so click is instant
+let _trailerDataPromise = fetch("/api/trailer").then(r => r.ok ? r.json() : null).catch(()=>null);
+
+async function playTrailer(){
+  if(trailerPlaying) return;
+  trailerPlaying = true;
+  trailerAbort   = false;
+  unlockAudioContext();
+
+  try {
+    trailerBtn.textContent = "PLAYING";
+    splash.classList.add("trailer-playing");
+
+    // Use pre-fetched data (or fallback fetch) in parallel with video ready check
+    const [trailer] = await Promise.all([
+      _trailerDataPromise || fetch("/api/trailer").then(r => r.json()),
+      _waitForVideoReady(trailerVideo),
+    ]);
+    _trailerDataPromise = null;
+    if(!trailer) throw new Error("Trailer data unavailable");
+
+    // Start music exactly when video is about to play
+    playTrailerMusic(trailer.music_url || "/static/music/trailer_suspense.mp3");
+
+    charLabel.textContent = "";
+    subtitleText.classList.add("narration");
+    await Promise.all([
+      playVoice(trailer.text, trailer.audio_b64, "TRAILER_NARRATOR"),
+      animateNarration(trailer.text, trailer.audio_b64),
+      playTrailerSequence(trailer.video_urls || [trailer.video_url || "/static/trailer/rooftop-party-to-crime-scene.mp4"]),
+    ]);
+
+    subtitleText.classList.remove("narration", "typing");
+    clearSubtitle();
+  } catch(e) {
+    console.error("trailer:", e);
+  } finally {
+    splash.classList.remove("trailer-playing");
+    stopTrailerMusic();
+    trailerBtn.textContent = "WATCH TRAILER";
+    trailerPlaying = false;
+    if(!splash.classList.contains("hidden")){
+      crossfadeVideo("/static/scenes/party_night.mp4?v=3");
+    }
+  }
+}
+
+function _waitForVideoReady(video){
+  return new Promise(resolve=>{
+    if(video.readyState >= 3) return resolve();
+    const done = ()=>{ video.removeEventListener("canplay",done); resolve(); };
+    video.addEventListener("canplay", done);
+    setTimeout(resolve, 2000); // fallback
+  });
+}
+
+async function playTrailerSequence(urls){
+  const valid = urls.filter(Boolean);
+  for(let i = 0; i < valid.length; i++){
+    if(i === 0) _showTrailerTitleCard("intro");
+    if(i === valid.length - 1) _showTrailerTitleCard("outro");
+    await playTrailerVideo(valid[i]);
+  }
+  _hideTrailerTitleCard();
+}
+
+function _showTrailerTitleCard(type){
+  if(type === "intro"){
+    ttcEyebrow.textContent = "AN INTERACTIVE FILM";
+    ttcTitle.textContent   = "THE MISSING ANGLE";
+    ttcSub.textContent     = "";
+  } else {
+    ttcEyebrow.textContent = "AN INTERACTIVE FILM";
+    ttcTitle.textContent   = "THE MISSING ANGLE";
+    ttcSub.textContent     = "Every angle hides a different truth.";
+  }
+  trailerTitleCard.classList.add("visible");
+  if(type === "intro"){
+    setTimeout(()=> trailerTitleCard.classList.remove("visible"), 1800);
+  }
+}
+
+function _hideTrailerTitleCard(){
+  trailerTitleCard.classList.remove("visible");
+  ttcEyebrow.textContent = "";
+  ttcTitle.textContent   = "";
+  ttcSub.textContent     = "";
+}
+
+async function playTrailerVideo(url){
+  const video = trailerVideo;
+  video.pause();
+  video.loop = false;
+  video.muted = true;
+  video.defaultMuted = true;
+  video.volume = 0;
+  video.setAttribute("muted", "");
+  video.onended = null;
+  video.oncanplay = null;
+  video.onerror = null;
+  video.src = url;
+  video.load();
+
+  await new Promise(resolve=>{
+    let done = false;
+    const finish = ()=>{ if(!done){ done = true; resolve(); } };
+    video.oncanplay = finish;
+    video.oncanplaythrough = finish;
+    video.onerror = finish;
+    setTimeout(finish, 1800);
+  });
+
+  try { video.currentTime = 0; } catch(e){}
+  await video.play().catch(e=> console.error("trailer play:", e));
+
+  await new Promise(resolve=>{
+    let done = false;
+    const finish = ()=>{ if(!done){ done = true; resolve(); } };
+    video.onended = finish;
+    video.onerror = finish;
+    setTimeout(finish, 14000);
+  });
+
+  video.loop = true;
+  video.pause();
+  video.removeAttribute("src");
+  video.load();
+}

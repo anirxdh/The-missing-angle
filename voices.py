@@ -6,4 +6,5 @@ DEFAULT_VOICE_IDS = {
     "MAYA":     "AZnzlk1XvdvUeBnXmlld",  # Domi — direct, emotional, raw
     "NARRATOR":      "21m00Tcm4TlvDq8ikWAM",  # Rachel — clear, cinematic, slightly dark
     "NARRATOR_MALE": "pNInz6obpgDQGcFmaJgB",  # Adam — deep, slow, noir thriller
+    "TRAILER_THRILLER": "N2lVS1w4EtoT3dr4eOWO",  # Callum — darker, tense thriller delivery
 }
