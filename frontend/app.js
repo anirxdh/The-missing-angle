@@ -682,7 +682,7 @@ trailerExitBtn?.addEventListener("click", ()=>{
 // Preload first trailer video so it's buffered before button click
 (function preloadFirstTrailerVideo(){
   const v = trailerVideo;
-  v.src     = "/static/trailer/rooftop-party-to-crime-scene.mp4";
+  v.src     = "/static/trailer/trailer_combined.mp4";
   v.preload = "auto";
   v.muted   = true;
   v.load();

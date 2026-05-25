@@ -595,13 +595,7 @@ async def get_trailer():
         "text": TRAILER_SCRIPT,
         "audio_b64": audio_b64,
         "music_url": music_url,
-        "video_urls": [
-            "/static/trailer/rooftop-party-to-crime-scene.mp4",
-            "/static/trailer/Woman_on_video_call_whispers_202605231532.mp4",
-            "/static/trailer/02_cole_footage.mp4",
-            "/static/trailer/03_missing_angle.mp4",
-            "/static/trailer/Three_character_portraits_fade_202605241441.mp4",
-        ],
+        "video_urls": ["/static/trailer/trailer_combined.mp4"],
     }
 
 
