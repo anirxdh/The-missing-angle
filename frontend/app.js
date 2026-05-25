@@ -808,7 +808,7 @@ async function playTrailerVideo(url){
     const finish = ()=>{ if(!done){ done = true; resolve(); } };
     video.onended = finish;
     video.onerror = finish;
-    setTimeout(finish, 14000);
+    setTimeout(finish, 60000); // up to 60s for combined trailer
   });
 
   video.loop = true;
