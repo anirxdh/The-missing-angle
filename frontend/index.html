@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Missing Angle</title>
-  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png" />
-  <link rel="apple-touch-icon" sizes="192x192" href="/static/brand/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/static/brand/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/style.css?v=cover5" />
+  <link rel="stylesheet" href="/style.css?v=splash-v1" />
 </head>
 <body>
 
@@ -27,10 +27,25 @@
   <!-- Scene flash -->
   <div id="scene-transition"></div>
 
+  <!-- Cinematic loader while scene video buffers / narration syncs -->
+  <div id="scene-loading" class="scene-loading" aria-hidden="true">
+    <div class="scene-loading-scan" aria-hidden="true"></div>
+    <div class="scene-loading-grain" aria-hidden="true"></div>
+    <div class="scene-loading-inner">
+      <div class="scene-loading-kicker">THE MISSING ANGLE</div>
+      <div class="scene-loading-title" id="scene-loading-title">OPENING CASE FILE</div>
+      <div class="scene-loading-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="scene-loading-fill" class="scene-loading-fill"></div>
+      </div>
+      <div class="scene-loading-detail" id="scene-loading-detail">Daniel Reed — rooftop fall, after midnight.</div>
+    </div>
+  </div>
+
   <!-- Choice options — appear on video after character speaks -->
   <div id="choice-overlay">
     <button class="choice-btn" id="choice-a"></button>
     <button class="choice-btn" id="choice-b"></button>
+    <button class="choice-btn" id="choice-c"></button>
     <button id="voice-choice-btn">Speak Choice</button>
   </div>
   <div id="choice-hint"></div>
@@ -41,46 +56,27 @@
     <div id="subtitle-text"></div>
   </div>
 
-  <!-- Cast strip — appears on hover like X-Ray -->
-  <div id="cast-hotspot" tabindex="0" aria-label="Cast">
-    <div id="cast-strip">
-      <div class="cast-label">Cast</div>
-      <div class="cast-card">
-        <img src="/static/avatars/sara_portrait.jpg" alt="Sara" />
-        <div>
-          <div class="cast-name">Sara</div>
-          <div class="cast-role">She was on the landing when Daniel fell. She says she wasn't.</div>
-        </div>
-      </div>
-      <div class="cast-card">
-        <img src="/static/avatars/cole_portrait.jpg" alt="Detective Cole" />
-        <div>
-          <div class="cast-name">Detective Cole</div>
-          <div class="cast-role">He has the footage. He has the wrong question.</div>
-        </div>
-      </div>
-      <div class="cast-card">
-        <img src="/static/avatars/maya_portrait.jpg" alt="Maya" />
-        <div>
-          <div class="cast-name">Maya</div>
-          <div class="cast-role">Daniel stole her phone. Sara knew. The camera didn't see that part.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Ending screen -->
   <div id="ending-screen">
-    <img class="brand-mark ending-mark" src="/static/brand/icon-192.png" alt="" />
     <div id="ending-eyebrow">THE MISSING ANGLE</div>
     <div id="ending-name"></div>
     <div id="ending-desc"></div>
     <button id="ending-replay">play again</button>
   </div>
 
+  <!-- Intro story beat card — after opening narration -->
+  <div id="story-card" class="story-card" aria-hidden="true">
+    <div class="story-card-inner">
+      <div class="story-card-kicker" id="story-card-kicker">CASE FILE / DANIEL REED</div>
+      <h2 class="story-card-title" id="story-card-title">HIS LAST NIGHT ON THE ROOF</h2>
+      <ul class="story-card-beats" id="story-card-beats"></ul>
+      <button type="button" id="story-card-cta" class="story-card-cta">LET'S INVESTIGATE</button>
+    </div>
+  </div>
+
   <!-- Click to begin splash — gates audio autoplay -->
   <div id="splash">
-    <img id="splash-cover" src="/static/brand/missing-angle-cover2.jpeg?v=cover4" alt="" />
+    <img id="splash-cover" src="/static/brand/missing-angle-cover2.jpeg?v=cover1" alt="" />
     <video id="trailer-video" playsinline muted></video>
 
     <!-- Trailer title card overlay -->
@@ -93,22 +89,266 @@
     <!-- Trailer controls overlay -->
     <div id="trailer-controls">
       <button id="trailer-exit-btn">&#x2715; EXIT</button>
-      <div id="trailer-captions"></div>
     </div>
 
     <div id="splash-frame">
       <div class="splash-scan"></div>
-      <div id="splash-eyebrow">An Interactive Film</div>
+      <div id="splash-eyebrow">Interactive Mystery Film</div>
       <h1 id="splash-title">THE MISSING<br>ANGLE</h1>
-      <div id="splash-sub">Every angle hides a different truth.</div>
-      <div id="splash-desc">At a rooftop party, Daniel Reed falls from the east stairwell. The police call it an accident. The footage disagrees. Sara was there. So was Maya. You watch the film frame by frame and decide what the camera shows next.</div>
+      <div id="splash-sub">Investigate a rooftop death. Recover the angle everyone missed.</div>
+      <div id="splash-desc">You are the detective. Search the crime scene for audio evidence, question the last people who saw Daniel alive, rebuild the case on the evidence board, and choose who pushed him.</div>
       <div id="splash-actions">
-        <button id="splash-btn">BEGIN</button>
-        <button id="trailer-btn">WATCH TRAILER</button>
+        <div class="splash-primary">
+          <button id="splash-btn">START INVESTIGATION</button>
+          <button id="trailer-btn">WATCH TRAILER</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <script src="/app.js"></script>
+  <!-- Puzzle recovery controls -->
+  <div id="puzzle-nav" class="puzzle-nav hidden" aria-label="Puzzle navigation">
+    <button id="puzzle-retry" type="button">RETRY</button>
+    <button id="puzzle-back" type="button">BACK TO MENU</button>
+  </div>
+
+  <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="false" title="Mute music and narration">
+    <span id="sound-toggle-label">SOUND ON</span>
+  </button>
+
+  <!-- ── DETECTIVE ROOM ─────────────────────────────────────────── -->
+  <div id="dr-room" class="dr-hidden">
+
+    <!-- 3D scene container -->
+    <div class="dr-scene">
+
+      <!-- Back wall -->
+      <div class="dr-back-wall">
+
+        <!-- Corkboard (right side of back wall) -->
+        <div id="dr-corkboard">
+          <div class="dr-board-header">EVIDENCE BOARD / DANIEL REED</div>
+
+          <!-- Suspect portraits always visible -->
+          <div class="dr-portrait dr-roster-hidden" id="dr-portrait-daniel" data-board-person="DANIEL">
+            <div class="dr-pin dr-pin-red"></div>
+            <video src="/static/scenes/intro-party.mp4" muted loop playsinline autoplay></video>
+            <div class="dr-portrait-name">DANIEL REED</div>
+            <div class="dr-portrait-status">VICTIM</div>
+          </div>
+
+          <div class="dr-portrait dr-roster-hidden" id="dr-portrait-sara" data-board-suspect="SARA">
+            <div class="dr-pin dr-pin-red"></div>
+            <video src="/static/scenes/sara_video_call.mp4" muted loop playsinline autoplay></video>
+            <div class="dr-portrait-name">SARA MALIK</div>
+            <div class="dr-portrait-status">UNCONFIRMED</div>
+          </div>
+
+          <div class="dr-portrait dr-roster-hidden" id="dr-portrait-maya" data-board-suspect="MAYA">
+            <div class="dr-pin dr-pin-red"></div>
+            <video src="/static/scenes/maya_video_call.mp4" muted loop playsinline autoplay></video>
+            <div class="dr-portrait-name">MAYA REYES</div>
+            <div class="dr-portrait-status">UNCONFIRMED</div>
+          </div>
+
+          <div class="dr-portrait dr-roster-hidden" id="dr-portrait-cole" data-board-suspect="COLE">
+            <div class="dr-pin dr-pin-red"></div>
+            <video src="/static/scenes/cole_video_call.mp4" muted loop playsinline autoplay></video>
+            <div class="dr-portrait-name">ADRIAN COLE</div>
+            <div class="dr-portrait-status">SECURITY</div>
+          </div>
+
+          <!-- Dynamic evidence cards injected here -->
+          <div id="dr-board-cards"></div>
+
+          <!-- SVG string layer -->
+          <svg id="dr-board-strings" aria-hidden="true"></svg>
+
+        </div>
+
+      </div><!-- /back wall -->
+
+      <!-- Side walls (CSS 3D depth) -->
+      <div class="dr-left-wall"></div>
+      <div class="dr-right-wall"></div>
+
+      <!-- Floor -->
+      <div class="dr-floor"></div>
+
+      <!-- Overhead lamp -->
+      <div class="dr-lamp-cord"></div>
+      <div class="dr-lamp-shade"></div>
+
+      <!-- Table (foreground edge, always visible) -->
+      <div class="dr-table-surface"></div>
+
+    </div><!-- /dr-scene -->
+
+    <!-- Witness feed — outside 3D scene so interview video stays visible -->
+    <div id="dr-intg-section" class="dr-section">
+      <div class="dr-panel-title">LIVE WITNESS FEED</div>
+      <div class="dr-intg-frame">
+        <video id="dr-intg-video" muted loop playsinline class="dr-intg-video"></video>
+        <div id="dr-intg-name" class="dr-intg-name"></div>
+          <div id="dr-intg-status" class="dr-intg-status">STANDBY</div>
+      </div>
+    </div>
+
+    <!-- Top bar: case badge + interview progress -->
+    <div class="dr-topbar">
+      <div class="dr-badge">LEAD DETECTIVE - CASE #2024-1104</div>
+      <div id="dr-progress" class="dr-progress"></div>
+    </div>
+
+    <!-- Interview order — compact -->
+    <nav id="dr-interview-tabs" class="dr-interview-tabs" aria-label="Interview order">
+      <div class="dr-interview-steps">
+        <span class="dr-interview-tab" data-suspect="SARA">SARA</span>
+        <span class="dr-interview-arrow" aria-hidden="true">→</span>
+        <span class="dr-interview-tab" data-suspect="MAYA">MAYA</span>
+        <span class="dr-interview-arrow" aria-hidden="true">→</span>
+        <span class="dr-interview-tab" data-suspect="COLE">COLE</span>
+      </div>
+    </nav>
+
+    <!-- Interrogation controls (bottom) -->
+    <div id="dr-controls" class="dr-controls">
+      <div id="dr-question-btns" class="dr-question-btns"></div>
+      <div id="dr-ev-panel" class="dr-ev-panel dr-hidden" style="display:none"></div>
+    </div>
+
+    <!-- Subtitle (detective room variant) -->
+    <div class="dr-subtitle">
+      <div id="dr-speaker"></div>
+      <div id="dr-dialogue"></div>
+    </div>
+
+    <!-- Case file panel overlay -->
+    <div id="dr-casefile-panel" class="dr-casefile-panel dr-hidden">
+      <div class="dr-cf-header">
+        <span>CASE FILE — DANIEL REED</span>
+        <button id="dr-cf-close">✕</button>
+      </div>
+      <div id="dr-cf-list" class="dr-cf-list"></div>
+    </div>
+
+  </div><!-- /dr-room -->
+
+  <!-- Evidence whiteboard: appears after interviews, replaces audio reconstruction puzzle -->
+  <section id="ar-scene" class="ar-hidden" aria-hidden="true">
+    <div class="wb-bg"></div>
+    <header class="wb-header">
+      <div class="wb-kicker">CASE ANALYSIS — SD CARD + CCTV SYNC</div>
+      <h2 class="wb-title">EVIDENCE BOARD</h2>
+      <p id="wb-closing" class="wb-closing">Loading case summary…</p>
+      <div id="ar-progress" class="wb-progress"></div>
+    </header>
+
+    <div class="wb-board">
+      <!-- SVG string connections — absolute overlay -->
+      <svg id="wb-strings" class="wb-strings" aria-hidden="true"></svg>
+
+      <!-- Row 1: three person cards -->
+      <div class="wb-persons-row">
+        <div class="wb-person-card" data-person="sara">
+          <video class="wb-person-img" src="/static/scenes/sara_video_call.mp4" muted loop playsinline autoplay></video>
+          <div class="wb-person-name">SARA MALIK</div>
+          <div class="wb-person-role">Business Partner</div>
+          <div class="wb-insight-label">Key insight</div>
+          <div class="wb-person-insight" data-insight="sara">…</div>
+        </div>
+        <div class="wb-person-card" data-person="maya">
+          <video class="wb-person-img" src="/static/scenes/maya_video_call.mp4" muted loop playsinline autoplay></video>
+          <div class="wb-person-name">MAYA REYES</div>
+          <div class="wb-person-role">Girlfriend</div>
+          <div class="wb-insight-label">Key insight</div>
+          <div class="wb-person-insight" data-insight="maya">…</div>
+        </div>
+        <div class="wb-person-card" data-person="cole">
+          <video class="wb-person-img" src="/static/scenes/cole_video_call.mp4" muted loop playsinline autoplay></video>
+          <div class="wb-person-name">ADRIAN COLE</div>
+          <div class="wb-person-role">Security Supervisor</div>
+          <div class="wb-insight-label">Key insight</div>
+          <div class="wb-person-insight" data-insight="cole">…</div>
+        </div>
+      </div>
+
+      <!-- Row 2: evidence + audio -->
+      <div class="wb-lower">
+        <div class="wb-evidence">
+          <div class="wb-ev-card" data-ev="camera">
+            <div class="wb-ev-icon">📷</div>
+            <div class="wb-ev-title">CAMERA BLACKOUT</div>
+            <div class="wb-ev-detail">23:02 — credential override<br>2 min before Daniel fell</div>
+          </div>
+          <div class="wb-ev-card" data-ev="sd">
+            <div class="wb-ev-icon">💾</div>
+            <div class="wb-ev-title">SD AUDIO BACKUP</div>
+            <div class="wb-ev-detail">Recovered from rooftop bar<br>Multiple voices — 4 fragments</div>
+          </div>
+          <div class="wb-ev-card" data-ev="phone">
+            <div class="wb-ev-icon">📱</div>
+            <div class="wb-ev-title">BROKEN RECORDER</div>
+            <div class="wb-ev-detail">Phone taken during argument<br>Someone demanded both copies</div>
+          </div>
+        </div>
+        <div class="wb-audio">
+          <div class="wb-audio-label">RECOVERED INCIDENT AUDIO</div>
+          <div id="ar-fragment-list" class="wb-fragment-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <p id="ar-result" class="wb-result"></p>
+    <div class="wb-actions">
+      <div class="wb-choice-panel ar-hidden">
+        <div class="wb-choice-label">FINAL CASE CHOICE</div>
+        <button class="wb-choice" type="button" data-accuse="accuse_sara">ACCUSE SARA</button>
+        <button class="wb-choice" type="button" data-accuse="accuse_maya">ACCUSE MAYA</button>
+        <button class="wb-choice" type="button" data-accuse="accuse_cole">ACCUSE COLE</button>
+      </div>
+      <button id="ar-continue" class="ar-hidden wb-continue" type="button">CONTINUE →</button>
+    </div>
+  </section>
+
+  <!-- Rooftop evidence search: appears after CCTV review -->
+  <section id="ri-scene" class="ri-hidden" aria-hidden="true">
+    <canvas id="ri-canvas" aria-label="Rooftop investigation"></canvas>
+    <div id="ri-load-status" class="ri-load-status">LOADING ROOFTOP SCENE</div>
+    <header class="ri-header">
+      <div>
+        <div class="ri-kicker">EVIDENCE SEARCH</div>
+        <div class="ri-title">FALL SITE</div>
+        <p id="ri-brief" class="ri-brief"></p>
+      </div>
+      <div id="ri-counter" class="ri-counter">WORLD PREVIEW</div>
+    </header>
+    <aside class="ri-file">
+      <div class="ri-file-title">CASE SEARCH</div>
+      <button id="ri-hint-btn" class="ri-hint-btn" type="button">REVEAL HINT</button>
+      <div id="ri-hint-text" class="ri-hint-text">Tap for a search area.</div>
+      <div class="ri-file-subtitle">RECOVERED</div>
+      <div id="ri-evidence-list" class="ri-evidence-list"></div>
+    </aside>
+    <button id="ri-back" class="ri-back" type="button" style="display:none"></button>
+    <button id="ri-continue" class="ri-continue" type="button" disabled>FIND 3 KEY CLUES</button>
+  </section>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+        "@sparkjsdev/spark": "https://esm.sh/@sparkjsdev/spark@2.1.0?external=three"
+      }
+    }
+  </script>
+  <script type="module">
+    import { Conversation } from "https://cdn.jsdelivr.net/npm/@11labs/client@latest/+esm";
+    window.ElevenLabsConversation = Conversation;
+  </script>
+  <script type="module" src="/static/rooftop-investigation.js?v=rooftop-load-v11"></script>
+  <script src="/detective-room.js?v=sound-toggle-v1"></script>
+  <script src="/app.js?v=splash-v1"></script>
 </body>
 </html>
