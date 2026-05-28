@@ -1579,6 +1579,7 @@ trailerExitBtn?.addEventListener("click", ()=>{
   _hideTrailerTitleCard();
   splash.classList.remove("trailer-playing");
   stopTrailerMusic();
+  setAudioPanelOpen(false);
   trailerBtn.textContent = "WATCH TRAILER";
   trailerPlaying = false;
   subtitleText.classList.remove("narration","typing");
@@ -1602,6 +1603,7 @@ async function playTrailer(){
   if(trailerPlaying) return;
   trailerPlaying = true;
   trailerAbort   = false;
+  setAudioPanelOpen(false);
   unlockAudioContext();
 
   try {
