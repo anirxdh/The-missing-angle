@@ -27,8 +27,12 @@ const DR = (() => {
     const busy = isInterviewBusy();
     const done = $('dr-done-btn');
     if (done) done.disabled = busy;
-    document.querySelectorAll('.dr-q-hint').forEach(el => {
-      el.classList.toggle('dr-q-hint-busy', busy);
+    document.querySelectorAll('.dr-q-card').forEach(el => {
+      el.classList.toggle('dr-q-card-busy', busy);
+      el.disabled =
+        el.classList.contains('dr-q-card-asked') ||
+        el.classList.contains('dr-q-card-locked') ||
+        busy;
     });
   }
 
@@ -259,60 +263,58 @@ const DR = (() => {
 
   function renderQuestions() {
     const c = $('dr-question-btns');
+    const controls = $('dr-controls');
     c.innerHTML = '';
-    const suspectColor = getSuspectColor(_suspect);
+    if (controls && _suspect) controls.dataset.witness = _suspect;
 
-    // Suspect context header for right panel
-    if (_suspect) {
-      const header = document.createElement('div');
-      header.className = 'dr-intg-header';
-      header.innerHTML =
-        `<span class="dr-intg-hname" style="color:${suspectColor}">${_suspect}</span>` +
-        `<span class="dr-intg-hstatus">&#9679; ${$('dr-intg-section')?.classList.contains('dr-video-disabled') ? 'AUDIO' : 'LIVE'}</span>`;
-      c.appendChild(header);
-    }
-
-    // Live voice — ElevenLabs Speech Engine (WebRTC + Groq on server)
     const seWrap = document.createElement('div');
     seWrap.className = 'dr-se-wrap';
     const seBtn = document.createElement('button');
     seBtn.className = 'dr-se-btn';
     seBtn.id = 'dr-se-btn';
-    seBtn.textContent = '🎙 LIVE VOICE — SPEAK TO ' + _suspect;
+    seBtn.type = 'button';
+    seBtn.textContent = 'Start live voice';
     seBtn.addEventListener('click', () => toggleSpeechEngine(_suspect));
     const seNote = document.createElement('p');
     seNote.className = 'dr-se-note';
-    seNote.textContent = 'ElevenLabs Speech Engine · mic in, Groq character reply, voice out';
+    seNote.textContent = 'Speak freely — ElevenLabs Speech Engine + Groq';
     seWrap.appendChild(seBtn);
     seWrap.appendChild(seNote);
     c.appendChild(seWrap);
-
-    const available = _currentQuestions.filter(q =>
-      !_askedKeys.has(q.key) && hasRequiredEvidence(q.requires_evidence)
+    _setSEStatus(
+      _seActive ? (_seSpeaking ? 'speaking' : 'live') : 'idle'
     );
-    if (available.length) {
-      const hintsWrap = document.createElement('div');
-      hintsWrap.className = 'dr-q-hints';
-      const hintsLabel = document.createElement('div');
-      hintsLabel.className = 'dr-q-hints-label';
-      hintsLabel.textContent = 'Quick question hints';
-      hintsWrap.appendChild(hintsLabel);
-      const hintsList = document.createElement('ul');
-      hintsList.className = 'dr-q-hints-list';
-      available.forEach(q => {
-        const li = document.createElement('li');
-        li.className = 'dr-q-hint';
-        li.textContent = q.cole_asks;
-        li.title = 'Tap to ask this';
-        li.addEventListener('click', () => askQuestion(q));
-        hintsList.appendChild(li);
+
+    const questions = (_currentQuestions || []).slice(0, 2);
+    if (questions.length) {
+      const qSection = document.createElement('div');
+      qSection.className = 'dr-q-cards';
+      const qLabel = document.createElement('div');
+      qLabel.className = 'dr-q-cards-label';
+      qLabel.textContent = 'Or tap a question';
+      qSection.appendChild(qLabel);
+
+      questions.forEach((q, index) => {
+        const asked = _askedKeys.has(q.key);
+        const locked = !hasRequiredEvidence(q.requires_evidence);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'dr-q-card' + (asked ? ' dr-q-card-asked' : '') + (locked ? ' dr-q-card-locked' : '');
+        card.disabled = asked || locked || isInterviewBusy();
+        card.innerHTML =
+          `<span class="dr-q-num">${index + 1}</span>` +
+          `<span class="dr-q-body">` +
+            `<span class="dr-q-text">${q.cole_asks}</span>` +
+            `<span class="dr-q-meta">${asked ? 'Asked' : locked ? 'Need evidence' : 'Tap to ask'}</span>` +
+          `</span>`;
+        if (!asked && !locked) card.addEventListener('click', () => askQuestion(q));
+        qSection.appendChild(card);
       });
-      hintsWrap.appendChild(hintsList);
-      c.appendChild(hintsWrap);
+      c.appendChild(qSection);
     }
 
-    // Done — advance to next witness or next story beat after Cole
     const doneBtn = document.createElement('button');
+    doneBtn.type = 'button';
     doneBtn.className = 'dr-q-btn dr-q-done';
     doneBtn.id = 'dr-done-btn';
     doneBtn.disabled = isInterviewBusy();
@@ -650,7 +652,7 @@ const DR = (() => {
 
   // ── Audio ──────────────────────────────────────────────────────────────────
   function playAudio(b64, onEnded) {
-    if (window.isSoundMuted?.()) {
+    if (window.isVoiceMuted?.()) {
       pauseInterviewVideo();
       window.duckBgMusic?.(false);
       if (onEnded) onEnded();
@@ -718,6 +720,10 @@ const DR = (() => {
   let _seCharacter    = null;
 
   async function startSpeechEngine(character) {
+    if (window.isVoiceMuted?.()) {
+      showLine('DETECTIVE', 'Turn voice on to use live voice.');
+      return;
+    }
     if (_seActive || _seConversation) return;
     _seCharacter = character || _suspect || "SARA";
     const Conversation = window.ElevenLabsConversation ||
@@ -802,11 +808,11 @@ const DR = (() => {
     if (!btn) return;
     const name = _seCharacter || _suspect || "SARA";
     const labels = {
-      idle: `LIVE VOICE — ${name}`,
-      connecting: "CONNECTING SPEECH ENGINE…",
-      live: `LIVE WITH ${name} — END CALL`,
-      speaking: `${name} SPEAKING — END CALL`,
-      error: `RETRY SPEECH ENGINE`,
+      idle: 'Start live voice',
+      connecting: 'Connecting…',
+      live: `End live call — ${_seCharacter || name}`,
+      speaking: `${name} speaking…`,
+      error: 'Retry live voice',
     };
     btn.textContent  = labels[status] || status;
     btn.dataset.status = status;

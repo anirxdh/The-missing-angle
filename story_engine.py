@@ -2,10 +2,31 @@ import json
 import os
 from dataclasses import dataclass, field
 
-with open(os.path.join(os.path.dirname(__file__), "scenes.json")) as f:
-    SCENE_DATA = json.load(f)
+_SCENES_PATH = os.path.join(os.path.dirname(__file__), "scenes.json")
+_scenes_mtime = 0.0
+SCENE_DATA: dict = {}
+SCENES: dict = {}
 
-SCENES = SCENE_DATA["scenes"]
+
+def reload_scenes_if_needed() -> None:
+    """Reload scenes.json when the file changes (uvicorn --reload ignores JSON edits)."""
+    global _scenes_mtime
+    try:
+        mtime = os.path.getmtime(_SCENES_PATH)
+    except OSError:
+        return
+    if mtime == _scenes_mtime and SCENES:
+        return
+    with open(_SCENES_PATH, encoding="utf-8") as f:
+        data = json.load(f)
+    SCENE_DATA.clear()
+    SCENE_DATA.update(data)
+    SCENES.clear()
+    SCENES.update(SCENE_DATA.get("scenes", {}))
+    _scenes_mtime = mtime
+
+
+reload_scenes_if_needed()
 
 
 @dataclass
@@ -17,6 +38,7 @@ class StoryState:
     interview_replies: dict = field(default_factory=lambda: {"SARA": [], "MAYA": [], "COLE": []})
 
     def get_scene(self) -> dict:
+        reload_scenes_if_needed()
         return SCENES.get(self.current_scene, SCENES["crime_scene"])
 
 

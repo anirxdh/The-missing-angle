@@ -57,7 +57,7 @@ HOW YOU BEHAVE:
 
 RULES:
 - Stay in character at all times. You are Sara. Do not break the fourth wall.
-- Keep every reply to 1–2 short sentences (~25–35 words). Be human, not perfect — never ramble.
+- Keep every reply to 2–3 sentences (~35–50 words). Be human, not perfect — don't ramble, but give enough to feel real.
 - Do not list or number things. Speak like a real person under stress.
 - Never claim you witnessed the push. You can identify Cole and say Daniel was alive when you left."""
 
@@ -69,7 +69,7 @@ OUTPUT FORMAT (strict):
 - Convey emotion through word choice and phrasing only — not action descriptions.
 - Never ask the detective questions. Only answer what was asked — no counter-questions, no rhetorical questions, no "Why does that matter?"
 - End every reply with a statement, never a question mark.
-- Hard limit: 2 sentences and ~35 words. Stop when you have answered — do not add extra detail."""
+- Hard limit: 3 sentences and ~50 words. Stop when you have answered — don't pad with extra detail."""
 
 MAYA_SYSTEM_PROMPT = """You are Maya Reyes in the interactive mystery film The Missing Angle. The player is investigating Daniel Reed's fatal rooftop fall and questioning you live.
 
@@ -91,7 +91,7 @@ HOW YOU BEHAVE:
 - You resist exposing Cole and the recording until shown the damaged audio recorder, SD card, or transmitter log.
 
 RULES:
-- Stay in character. Keep every reply to 1–2 short sentences (~25–35 words). Speak under emotional pressure, not like a script.
+- Stay in character. Keep every reply to 2–3 sentences (~35–50 words). Speak under emotional pressure, not like a script.
 - Never claim you saw Daniel die. You may state the evidence points to Cole, but you did not see the push."""
 
 COLE_SYSTEM_PROMPT = """You are Adrian Cole in the interactive mystery film The Missing Angle. You were the rooftop building security supervisor on the night Daniel Reed was pushed to his death. The player is the lead detective questioning you live.
@@ -117,7 +117,7 @@ HOW YOU BEHAVE:
 - When confronted with the camera override plus the recording, the mask slips further — sharper, more insistent denials, still no confession.
 
 RULES:
-- Stay in character at all times. Keep every reply to 1–2 short sentences (~25–35 words). Never ramble.
+- Stay in character at all times. Keep every reply to 2–3 sentences (~35–50 words). Never ramble.
 - Sound like someone defending a story that's starting to crack — not calm, not confident.
 - Never confess outright or reveal unseen final footage. The player must solve the case from evidence."""
 
@@ -133,8 +133,8 @@ def character_system_prompt(name: str) -> str:
     return base + "\n\n" + SPOKEN_OUTPUT_RULES
 
 
-MAX_REPLY_SENTENCES = 2
-MAX_REPLY_WORDS = 38
+MAX_REPLY_SENTENCES = 3
+MAX_REPLY_WORDS = 52
 
 
 def trim_reply_length(
@@ -189,7 +189,7 @@ def make_transcript_handler(character: str = "SARA"):
             model="llama-3.3-70b-versatile",
             messages=messages,
             stream=True,
-            max_tokens=90,
+            max_tokens=120,
             temperature=0.92 if character == "COLE" else 0.85,
         )
         await session.send_response(stream)

@@ -14,13 +14,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
 from groq import AsyncGroq
 from pydantic import BaseModel
 from elevenlabs.speech_engine import verify_speech_engine_jwt
 
 load_dotenv()
 
-from story_engine import StoryEngine, SCENES
+from story_engine import StoryEngine, SCENES, reload_scenes_if_needed
 from characters import ALL_VOICES
 from media_engine import generate_scene_music, generate_trailer_music, SCENE_MUSIC_PROMPTS
 from sara_engine import (
@@ -31,6 +32,20 @@ from sara_engine import (
 
 ROOT = pathlib.Path(__file__).resolve().parent
 ON_VERCEL = bool(os.getenv("VERCEL"))
+ON_RAILWAY = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"))
+
+_MEDIA_CACHE_SUFFIXES = {".mp4", ".mp3", ".spz", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
+
+
+class CachedStaticFiles(StaticFiles):
+    """Long-cache static media; supports byte-range streaming on Railway/local."""
+
+    async def get_response(self, path: str, scope) -> Response:
+        response = await super().get_response(path, scope)
+        suffix = pathlib.Path(path).suffix.lower()
+        if response.status_code == 200 and suffix in _MEDIA_CACHE_SUFFIXES:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
 
 app = FastAPI(title="The Missing Angle")
 engine = StoryEngine()
@@ -212,12 +227,20 @@ async def tts(text: str, character: str) -> bytes:
     settings = char["voice_settings"]
     model_id = char.get("model_id", "eleven_turbo_v2_5")
 
+    payload = {
+        "text": text,
+        "model_id": model_id,
+        "voice_settings": settings,
+        "output_format": "mp3_44100_128",
+    }
+    if char.get("speed"):
+        payload["speed"] = char["speed"]
+
     async with httpx.AsyncClient(timeout=30) as c:
         r = await c.post(
             f"{ELEVENLABS_BASE}/text-to-speech/{voice_id}",
             headers={"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json"},
-            json={"text": text, "model_id": model_id,
-                  "voice_settings": settings, "output_format": "mp3_44100_128"},
+            json=payload,
         )
         if r.status_code != 200:
             raise RuntimeError(f"TTS failed: {r.text}")
@@ -323,6 +346,11 @@ async def _receive_loop(ws: WebSocket):
 
 
 async def _send_scene_start(sink: SessionSink, scene: dict, sid: Optional[str] = None):
+    reload_scenes_if_needed()
+    scene_id = scene.get("id")
+    if scene_id and scene_id in SCENES:
+        scene = SCENES[scene_id]
+
     if sid and scene.get("id"):
         engine.get_state(sid).current_scene = scene["id"]
 
@@ -434,7 +462,7 @@ async def _send_scene_start(sink: SessionSink, scene: dict, sid: Optional[str] =
         elapsed = time.time() - t0
         minimum_secs = float(scene.get("minimum_duration", 0))
         # +2.5s accounts for: 1s client video-load delay + 0.5s crossfade + 1s safety margin
-        adv_delay = max(0.5, narration_secs + 2.5 - elapsed, minimum_secs - elapsed)
+        adv_delay = max(0.5, narration_secs + 1.0 - elapsed, minimum_secs - elapsed)
         sink.schedule_auto_advance(auto_next, adv_delay, sid or "")
         return
 
@@ -803,7 +831,7 @@ async def _groq_interrogation_answer(suspect: str, question: str, story_context:
     instruction = (
         f"The detective is asking you: \"{question}\"\n"
         "Answer in character. Be truthful to your knowledge but guard what you're hiding. "
-        "1–2 short sentences only (~25–35 words). Speak like a real person under pressure — no lists, no numbering. "
+        "1–3 sentences (~35–50 words). Speak like a real person under pressure — no lists, no numbering. "
         "Spoken dialogue only — no stage directions or emotion tags. "
         "Never ask the detective questions — only answer."
         + (
@@ -826,7 +854,7 @@ async def _groq_interrogation_answer(suspect: str, question: str, story_context:
                 {"role": "user", "content": instruction},
             ],
             temperature=0.92 if suspect == "COLE" else 0.85,
-            max_tokens=90,
+            max_tokens=120,
         )
         return clean_spoken_reply(response.choices[0].message.content.strip())
     except Exception as e:
@@ -1006,7 +1034,7 @@ async def _out_of_scope_reply(suspect: str, detective_said: str) -> str:
     system_prompt = character_system_prompt(suspect)
     deflect_instruction = (
         "The detective just asked you something you either can't answer or won't answer right now. "
-        "Respond in character with a brief deflection — 1 short sentence only (~12–20 words). "
+        "Respond in character with a brief deflection — 1–2 short sentences (~18–28 words). "
         "Vary your wording: redirect ('that's not relevant'), limit what you'll share ('I've told you what I know'), "
         "or push back without asking a question ('I'm not getting into that'). "
         "Do NOT say 'I don't understand' or give generic help-desk rejections. Stay fully in character. "
@@ -1022,7 +1050,7 @@ async def _out_of_scope_reply(suspect: str, detective_said: str) -> str:
                     {"role": "user", "content": detective_said},
                 ],
                 temperature=0.95 if attempt else 0.88,
-                max_tokens=55,
+                max_tokens=70,
             )
             text = clean_spoken_reply(response.choices[0].message.content.strip())
             if text:
@@ -1076,6 +1104,7 @@ def _should_narrate(scene: dict) -> bool:
 @app.get("/api/health")
 async def health():
     return {"status": "ok",
+            "platform": "vercel" if ON_VERCEL else ("railway" if ON_RAILWAY else "local"),
             "elevenlabs": bool(ELEVENLABS_API_KEY),
             "groq":       bool(GROQ_API_KEY),
             "speech_engine": {
@@ -1134,6 +1163,7 @@ class ChoiceBody(BaseModel):
 
 def _restore_scene(state, scene_id: str) -> dict:
     """Use scene_id from request when available; fall back to engine state."""
+    reload_scenes_if_needed()
     if scene_id and scene_id in SCENES:
         state.current_scene = scene_id
         return SCENES[scene_id]
@@ -1276,8 +1306,8 @@ async def http_interrogate(body: InterrogateBody):
 
 # ── Static / frontend ──────────────────────────────────────────────────────
 
-app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
-app.mount("/world", StaticFiles(directory=str(ROOT / "3d")), name="world")
+app.mount("/static", CachedStaticFiles(directory=str(ROOT / "static")), name="static")
+app.mount("/world", CachedStaticFiles(directory=str(ROOT / "3d")), name="world")
 
 @app.get("/")
 def index():          return FileResponse(ROOT / "frontend/index.html")

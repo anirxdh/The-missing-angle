@@ -27,11 +27,12 @@ CHARACTERS = {
 NARRATOR = {
     "name": "NARRATOR",
     "voice_id": os.getenv("NARRATOR_VOICE_ID") or DEFAULT_VOICE_IDS["TRAILER_THRILLER"],
-    "model_id": "eleven_multilingual_v2",
+    "model_id": "eleven_turbo_v2_5",
+    "speed": 1.06,
     "voice_settings": {
-        "stability": 0.62,
+        "stability": 0.52,
         "similarity_boost": 0.76,
-        "style": 0.30,
+        "style": 0.22,
         "use_speaker_boost": True,
     },
 }

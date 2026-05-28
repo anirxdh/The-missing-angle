@@ -4,6 +4,7 @@
 const WS_PROTO = location.protocol === "https:" ? "wss" : "ws";
 const WS_URL = `${WS_PROTO}://${location.host}/ws/game`;
 const PREFER_HTTP_GAME = location.hostname.includes("vercel.app");
+// Vercel cannot serve WebSockets or stream large MP4s well — use HTTP API there only.
 const PUZZLE_SLUG = (location.pathname.match(/^\/puzzles\/([^/?#]+)/)?.[1] || "").toLowerCase();
 
 const CHAR_COLOR = { SARA: "#f472b6", COLE: "#94a3b8", MAYA: "#a78bfa", DANIEL: "#d6c2a1", DETECTIVE: "#d2ab4a" };
@@ -23,7 +24,7 @@ const SCENE_VIDEO_FILES = {
 
 function sceneVideoUrl(atmosphere){
   const file = SCENE_VIDEO_FILES[atmosphere] || atmosphere || "default";
-  return `/static/scenes/${file}.mp4?v=5`;
+  return `/static/scenes/${file}.mp4?v=6`;
 }
 
 // ── Background music ──────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ async function setSceneMusic(atmosphere){
     await _fadeMusic(0);
     bgMusic.src = url;
     bgMusic.load();
-    if(!soundMuted){
+    if(!musicMuted){
       bgMusic.play().catch(()=>{});
       _fadeMusic(0.22);
     }
@@ -67,14 +68,14 @@ function startSceneMusicFromClick(atmosphere){
   bgMusicAtm = atmosphere;
   bgMusic.src = `/static/music/${atmosphere}.mp3`;
   bgMusic.loop = true;
-  bgMusic.muted = false;
-  bgMusic.volume = soundMuted ? 0 : 0.22;
+  bgMusic.muted = musicMuted;
+  bgMusic.volume = musicMuted ? 0 : 0.22;
   bgMusic.load();
-  if(!soundMuted) bgMusic.play().catch(e=> console.error("scene music play:", e));
+  if(!musicMuted) bgMusic.play().catch(e=> console.error("scene music play:", e));
 }
 
 function _fadeMusic(target){
-  if(soundMuted) target = 0;
+  if(musicMuted) target = 0;
   return new Promise(resolve=>{
     const step = ()=>{
       const diff = target - bgMusic.volume;
@@ -89,39 +90,103 @@ function _fadeMusic(target){
 // Called by detective-room when a character speaks — ducks music while they talk
 const BG_MUSIC_FULL = 0.22;
 const BG_MUSIC_DUCK = 0.04;
-window.duckBgMusic  = (duck) => _fadeMusic(duck ? BG_MUSIC_DUCK : BG_MUSIC_FULL);
+window.duckBgMusic  = (duck) => {
+  if(musicMuted) return _fadeMusic(0);
+  return _fadeMusic(duck ? BG_MUSIC_DUCK : BG_MUSIC_FULL);
+};
 
-let soundMuted = false;
+let musicMuted = false;
+let voiceMuted = false;
+let audioPanelOpen = false;
 
-window.isSoundMuted = () => soundMuted;
+window.isMusicMuted = () => musicMuted;
+window.isVoiceMuted = () => voiceMuted;
+window.isSoundMuted = () => voiceMuted;
 
-function syncSoundToggleUI(){
-  const btn = document.getElementById("sound-toggle");
-  const label = document.getElementById("sound-toggle-label");
-  if(!btn) return;
-  btn.setAttribute("aria-pressed", soundMuted ? "true" : "false");
-  btn.classList.toggle("is-muted", soundMuted);
-  if(label) label.textContent = soundMuted ? "SOUND OFF" : "SOUND ON";
+function syncAudioPanelUI(){
+  const panel = document.getElementById("audio-toggles");
+  const toggle = document.getElementById("audio-panel-toggle");
+  if(panel){
+    panel.classList.toggle("is-open", audioPanelOpen);
+    panel.classList.toggle("is-collapsed", !audioPanelOpen);
+  }
+  if(toggle){
+    toggle.setAttribute("aria-expanded", audioPanelOpen ? "true" : "false");
+    toggle.setAttribute("aria-label", audioPanelOpen ? "Close audio controls" : "Open audio controls");
+    toggle.classList.toggle("is-muted", musicMuted || voiceMuted);
+  }
 }
 
-function setSoundMuted(muted){
-  soundMuted = muted;
-  if(soundMuted){
-    if(_currentAudio){ _currentAudio.pause(); _currentAudio = null; }
+function setAudioPanelOpen(open){
+  audioPanelOpen = open;
+  syncAudioPanelUI();
+}
+
+function syncMusicToggleUI(){
+  const btn = document.getElementById("music-toggle");
+  const label = document.getElementById("music-toggle-label");
+  const icon = document.getElementById("music-toggle-icon");
+  if(!btn) return;
+  btn.setAttribute("aria-pressed", musicMuted ? "true" : "false");
+  btn.setAttribute("aria-label", musicMuted ? "Turn music on" : "Turn music off");
+  btn.classList.toggle("is-muted", musicMuted);
+  if(label) label.textContent = musicMuted ? "Music off" : "Music on";
+  if(icon) icon.textContent = musicMuted ? "🔇" : "🎵";
+  syncAudioPanelUI();
+}
+
+function syncVoiceToggleUI(){
+  const btn = document.getElementById("voice-toggle");
+  const label = document.getElementById("voice-toggle-label");
+  const icon = document.getElementById("voice-toggle-icon");
+  if(!btn) return;
+  btn.setAttribute("aria-pressed", voiceMuted ? "true" : "false");
+  btn.setAttribute("aria-label", voiceMuted ? "Turn voice on" : "Turn voice off");
+  btn.classList.toggle("is-muted", voiceMuted);
+  if(label) label.textContent = voiceMuted ? "Voice off" : "Voice on";
+  if(icon) icon.textContent = voiceMuted ? "🔇" : "🔊";
+  syncAudioPanelUI();
+}
+
+function setMusicMuted(muted){
+  musicMuted = muted;
+  bgMusic.muted = muted;
+  trailerMusic.muted = muted;
+
+  if(musicMuted){
     bgMusic.volume = 0;
+    bgMusic.pause();
     trailerMusic.volume = 0;
     trailerMusic.pause();
-    window.DR?.stopCurrentAudio?.();
-  } else if(bgMusicAtm && bgMusic.src){
-    bgMusic.volume = BG_MUSIC_FULL;
-    bgMusic.play().catch(()=>{});
+  } else {
+    bgMusic.muted = false;
+    trailerMusic.muted = false;
+    if(bgMusicAtm && bgMusic.src){
+      bgMusic.volume = BG_MUSIC_FULL;
+      bgMusic.play().catch(()=>{});
+    }
   }
-  syncSoundToggleUI();
+  syncMusicToggleUI();
+}
+
+function setVoiceMuted(muted){
+  voiceMuted = muted;
+
+  if(voiceMuted){
+    if(_currentAudio){
+      _currentAudio.pause();
+      _currentAudio = null;
+    }
+    window.DR?.stopCurrentAudio?.();
+    window.DR?.stopInterviewMedia?.();
+    window.DR?.stopSpeechEngine?.();
+  }
+  syncVoiceToggleUI();
 }
 
 function playTrailerMusic(url){
   if(!url) return Promise.resolve();
-  if(soundMuted) return Promise.resolve();
+  if(musicMuted) return Promise.resolve();
   if(trailerMusic.src.endsWith(url) && !trailerMusic.paused) return Promise.resolve();
   return new Promise(resolve=>{
     trailerMusic.pause();
@@ -196,6 +261,7 @@ const endingScreen   = document.getElementById("ending-screen");
 const storyCard      = document.getElementById("story-card");
 const storyCardKicker = document.getElementById("story-card-kicker");
 const storyCardTitle = document.getElementById("story-card-title");
+const storyCardLine  = document.getElementById("story-card-line");
 const storyCardBeats = document.getElementById("story-card-beats");
 const storyCardCta   = document.getElementById("story-card-cta");
 const choiceOverlay  = document.getElementById("choice-overlay");
@@ -275,7 +341,7 @@ function scheduleHttpAutoAdvance(){
   if(currentScene?.has_narration && !narrationDone) return;
   if(httpAdvanceTimer){ clearTimeout(httpAdvanceTimer); httpAdvanceTimer = null; }
   const delay = currentScene?.has_narration
-    ? 1500
+    ? 600
     : (pendingHttpAutoAdvance.delay_ms || 3000);
   httpAdvanceTimer = setTimeout(()=>{
     pendingHttpAutoAdvance = null;
@@ -511,10 +577,26 @@ async function startRooftopPuzzle(){
 puzzleRetry?.addEventListener("click", retryCurrentPuzzle);
 puzzleBack?.addEventListener("click", backToMenu);
 
-document.getElementById("sound-toggle")?.addEventListener("click", () => {
-  setSoundMuted(!soundMuted);
+document.getElementById("audio-panel-toggle")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  setAudioPanelOpen(!audioPanelOpen);
 });
-syncSoundToggleUI();
+document.getElementById("music-toggle")?.addEventListener("click", () => {
+  setMusicMuted(!musicMuted);
+});
+document.getElementById("voice-toggle")?.addEventListener("click", () => {
+  setVoiceMuted(!voiceMuted);
+});
+document.addEventListener("click", (e) => {
+  if(!audioPanelOpen) return;
+  const panel = document.getElementById("audio-toggles");
+  if(panel && !panel.contains(e.target)) setAudioPanelOpen(false);
+});
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && audioPanelOpen) setAudioPanelOpen(false);
+});
+syncMusicToggleUI();
+syncVoiceToggleUI();
 
 function onAudioReconstructionSetup(msg){
   if(msg.id && msg.id !== "audio_reconstruction") return;
@@ -922,6 +1004,11 @@ async function onSceneNarration(msg){
     showStoryCard(currentScene.story_card);
     return;
   }
+  if(currentScene?.advance_after){
+    await sleep(1200);
+    drAdvance(currentScene.id);
+    return;
+  }
   if(pendingHttpAutoAdvance) scheduleHttpAutoAdvance();
   if(pendingQ) schedulePause(pendingQ.pause_at || 6);
   if(queuedSceneStart){
@@ -933,33 +1020,30 @@ async function onSceneNarration(msg){
 
 async function animateNarration(text, audio_b64){
   const displayText = cleanSpeechText(text);
-  // Estimate total audio duration from MP3 base64 size (128 kbps → 16000 B/s)
   const totalMs = audio_b64
     ? (audio_b64.length * 0.75 / 16000) * 1000
     : voiceDuration(displayText, "NARRATOR");
 
-  // Split at sentence boundaries — keeps punctuation with the phrase
   const phrases = displayText
     .replace(/([.!?])\s+/g, "$1\n")
     .replace(/\.\.\.\s*/g, "...\n")
-    .replace(/—\s*/g, "—\n")
     .split("\n")
     .map(s => s.trim())
     .filter(Boolean);
 
-  const msPerPhrase = totalMs / phrases.length;
+  const msPerPhrase = totalMs / Math.max(phrases.length, 1);
 
   for(const phrase of phrases){
     if(_narrationAbort) break;
     subtitleText.style.opacity = "1";
     subtitleText.classList.add("typing");
-    await typewriter(phrase, Math.min(msPerPhrase * 0.55, 2200));
+    await typewriter(phrase, Math.min(msPerPhrase * 0.72, 2800));
     if(_narrationAbort) break;
     subtitleText.classList.remove("typing");
-    await sleep(Math.max(300, msPerPhrase * 0.35));
+    await sleep(Math.max(80, msPerPhrase * 0.1));
     if(_narrationAbort) break;
     subtitleText.style.opacity = "0";
-    await sleep(220);
+    await sleep(60);
     subtitleText.textContent = "";
   }
 }
@@ -1331,7 +1415,14 @@ function hideStoryCard(){
 function showStoryCard(card){
   if(!storyCard || !card) return;
   if(storyCardKicker) storyCardKicker.textContent = card.kicker || "CASE FILE";
-  if(storyCardTitle) storyCardTitle.textContent = card.title || "";
+  if(storyCardTitle){
+    storyCardTitle.textContent = card.title || "";
+    storyCardTitle.hidden = !card.title;
+  }
+  if(storyCardLine){
+    storyCardLine.textContent = card.line || "";
+    storyCardLine.hidden = !card.line;
+  }
   if(storyCardBeats){
     storyCardBeats.innerHTML = "";
     (card.beats || []).forEach(beat => {
@@ -1339,6 +1430,7 @@ function showStoryCard(card){
       li.textContent = beat;
       storyCardBeats.appendChild(li);
     });
+    storyCardBeats.hidden = !(card.beats || []).length;
   }
   if(storyCardCta) storyCardCta.textContent = card.cta || "LET'S INVESTIGATE";
   storyCard.classList.add("active");
@@ -1382,7 +1474,7 @@ document.getElementById("ending-replay")?.addEventListener("click", ()=>{
 
 // ── Audio — ElevenLabs first, browser speech fallback ─────────────────────
 async function playVoice(text, b64, character){
-  if(soundMuted){
+  if(voiceMuted){
     await sleep(voiceDuration(cleanSpeechText(text), character));
     return;
   }
@@ -1391,7 +1483,7 @@ async function playVoice(text, b64, character){
 }
 
 function playB64(b64){
-  if(soundMuted) return Promise.resolve(false);
+  if(voiceMuted) return Promise.resolve(false);
   return new Promise(async res=>{
     let url = null;
     try {

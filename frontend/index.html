@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="/static/brand/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/style.css?v=splash-v1" />
+  <link rel="stylesheet" href="/style.css?v=interview-layout-v1" />
 </head>
 <body>
 
@@ -68,7 +68,8 @@
   <div id="story-card" class="story-card" aria-hidden="true">
     <div class="story-card-inner">
       <div class="story-card-kicker" id="story-card-kicker">CASE FILE / DANIEL REED</div>
-      <h2 class="story-card-title" id="story-card-title">HIS LAST NIGHT ON THE ROOF</h2>
+      <h2 class="story-card-title" id="story-card-title"></h2>
+      <p class="story-card-line" id="story-card-line"></p>
       <ul class="story-card-beats" id="story-card-beats"></ul>
       <button type="button" id="story-card-cta" class="story-card-cta">LET'S INVESTIGATE</button>
     </div>
@@ -112,9 +113,21 @@
     <button id="puzzle-back" type="button">BACK TO MENU</button>
   </div>
 
-  <button id="sound-toggle" class="sound-toggle" type="button" aria-pressed="false" title="Mute music and narration">
-    <span id="sound-toggle-label">SOUND ON</span>
-  </button>
+  <div class="audio-toggles is-collapsed" id="audio-toggles">
+    <div id="audio-panel-body" class="audio-panel-body">
+      <button id="music-toggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="Toggle background music">
+        <span class="audio-toggle-icon" id="music-toggle-icon" aria-hidden="true">🎵</span>
+        <span id="music-toggle-label">Music on</span>
+      </button>
+      <button id="voice-toggle" class="audio-toggle" type="button" aria-pressed="false" aria-label="Toggle narration and voice">
+        <span class="audio-toggle-icon" id="voice-toggle-icon" aria-hidden="true">🔊</span>
+        <span id="voice-toggle-label">Voice on</span>
+      </button>
+    </div>
+    <button id="audio-panel-toggle" class="audio-panel-toggle" type="button" aria-expanded="false" aria-controls="audio-panel-body" aria-label="Open audio controls">
+      <span class="audio-panel-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+    </button>
+  </div>
 
   <!-- ── DETECTIVE ROOM ─────────────────────────────────────────── -->
   <div id="dr-room" class="dr-hidden">
@@ -347,8 +360,8 @@
     import { Conversation } from "https://cdn.jsdelivr.net/npm/@11labs/client@latest/+esm";
     window.ElevenLabsConversation = Conversation;
   </script>
-  <script type="module" src="/static/rooftop-investigation.js?v=rooftop-load-v11"></script>
-  <script src="/detective-room.js?v=sound-toggle-v1"></script>
-  <script src="/app.js?v=splash-v1"></script>
+  <script type="module" src="/static/rooftop-investigation.js?v=audio-split-v1"></script>
+  <script src="/detective-room.js?v=audio-split-v1"></script>
+  <script src="/app.js?v=narration-pace-v1"></script>
 </body>
 </html>

@@ -202,17 +202,28 @@ Speech Engine needs a **public WebSocket** endpoint. Vercel serves the scripted 
 
 ## Deploy
 
-### Frontend + scripted game (Vercel)
+### Recommended: Railway (faster video + Speech Engine)
+
+**Use Railway for the full experience.** Vercel runs `server.py` as a serverless function — large MP4s (intro, CCTV, trailer) buffer slowly and WebSockets are unavailable. Railway runs one persistent Uvicorn process with direct static file streaming and range requests.
+
+1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo** → select this repo.
+2. Railway picks up [`railway.toml`](railway.toml) / [`nixpacks.toml`](nixpacks.toml) automatically.
+3. Add environment variables (same as local):
+   - `ELEVENLABS_API_KEY`
+   - `GROQ_API_KEY`
+   - After deploy, set `SPEECH_ENGINE_PUBLIC_URL` to your Railway public URL (e.g. `https://your-app.up.railway.app`)
+   - Run `python3 setup_speech_engines.py` locally with that URL, then add `SARA_SPEECH_ENGINE_ID`, `MAYA_SPEECH_ENGINE_ID`, `COLE_SPEECH_ENGINE_ID` in Railway.
+4. Open **Settings → Networking → Generate domain** and play at your `*.up.railway.app` URL.
+
+Verify deploy: `GET /api/health` should return `"platform": "railway"`.
+
+### Optional: Vercel (HTTP-only fallback)
 
 1. Import the repo in [Vercel](https://vercel.com).
 2. Set `ELEVENLABS_API_KEY` (and `GROQ_API_KEY` for whiteboard insights).
 3. Deploy — **https://the-missing-angle.vercel.app**
 
-On Vercel, WebSockets are unavailable; hint questions, TTS, and button choices use `/api/game/*` automatically.
-
-### Speech Engine backend (Railway)
-
-[`railway.toml`](railway.toml) is included. Deploy the same FastAPI app with env vars above so `/ws/sara`, `/ws/maya`, and `/ws/cole` stay connected for live interviews.
+On Vercel, WebSockets are unavailable and video loads through serverless — expect slower playback. The client auto-switches to `/api/game/*` HTTP mode on `*.vercel.app`.
 
 ---
 
@@ -241,7 +252,7 @@ See [`.env.example`](.env.example) for the full list.
 | **Voice** | ElevenLabs Speech Engine, TTS, STT, Music API |
 | **Frontend** | Vanilla JS SPA, Three.js + Spark (3D rooftop) |
 | **Story** | JSON scene graph (`scenes.json`) + runtime state |
-| **Deploy** | Vercel (HTTP game) + Railway (WebSocket voice) |
+| **Deploy** | **Railway** (recommended — static streaming + WebSockets) · Vercel (HTTP fallback) |
 
 ---
 

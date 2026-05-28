@@ -335,6 +335,10 @@ const RI = (() => {
   }
 
   function playReviewAudio(key, button) {
+    if (window.isVoiceMuted?.()) {
+      if (button) resetListenButton(button, key);
+      return;
+    }
     if (button) {
       document.querySelectorAll(".ri-review-btn-listen.is-playing").forEach(btn => btn.classList.remove("is-playing"));
       button.classList.add("is-playing");

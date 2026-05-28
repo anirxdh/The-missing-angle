@@ -10,19 +10,9 @@
       "characters_present": [],
       "pause_at": 99,
       "advance_after": "rooftop_investigation",
-      "minimum_duration": 14,
+      "minimum_duration": 18,
       "narrator_character": "NARRATOR",
-      "narration": "Last night, Maya Reyes and Sara Malik celebrated on this rooftop—their startup was funded, and they were flying out by morning. Daniel Reed was Maya's secret boyfriend. He was upset when he learned she was leaving. That night, no one knew it would be his last.",
-      "story_card": {
-        "kicker": "CASE FILE / DANIEL REED",
-        "title": "HIS LAST NIGHT ON THE ROOF",
-        "beats": [
-          "Daniel was upset — Maya's flight meant she was leaving him behind.",
-          "No one on that rooftop knew it would be his last night.",
-          "By morning, Daniel Reed was dead."
-        ],
-        "cta": "LET'S INVESTIGATE"
-      },
+      "narration": "Last night, Maya Reyes and Sara Malik celebrated on this rooftop—their startup was funded, and they were flying out by morning. Daniel Reed was Maya's secret boyfriend. He was upset when he learned she was leaving. That night, no one knew it would be his last. Let's investigate the crime scene.",
       "question": null,
       "branches": {}
     },
@@ -44,9 +34,9 @@
       "characters_present": [],
       "pause_at": 99,
       "auto_advance": "sara_interview_1",
-      "minimum_duration": 16,
+      "minimum_duration": 12,
       "narrator_character": "NARRATOR",
-      "narration": "CCTV gives us fragments — the party, the argument, Maya and Sara leaving, Daniel left behind. Did you notice someone else on the roof? Let's start with our main suspects: Sara, Maya, and Cole.",
+      "narration": "This is the CCTV from the building — the party, the argument, Maya and Sara leaving, Daniel left behind. Look for anyone else on the roof, then we talk to Sara, Maya, and Cole.",
       "question": null,
       "branches": {}
     },
