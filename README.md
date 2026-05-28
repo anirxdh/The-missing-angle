@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://the-missing-angle.vercel.app"><strong>▶ Play the demo</strong></a>
+  <a href="https://the-missing-angle-production.up.railway.app"><strong>▶ Play the demo</strong></a>
   &nbsp;·&nbsp;
   <a href="https://hacks.elevenlabs.io/hackathons/9">ElevenLabs Hack #10: Speech Engine</a>
 </p>
@@ -207,11 +207,11 @@ Speech Engine needs a **public WebSocket** endpoint. Vercel serves the scripted 
 **Use Railway for the full experience.** Vercel runs `server.py` as a serverless function — large MP4s (intro, CCTV, trailer) buffer slowly and WebSockets are unavailable. Railway runs one persistent Uvicorn process with direct static file streaming and range requests.
 
 1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo** → select this repo.
-2. Railway picks up [`railway.toml`](railway.toml) / [`nixpacks.toml`](nixpacks.toml) automatically.
+2. Railway picks up [`railway.toml`](railway.toml) automatically.
 3. Add environment variables (same as local):
    - `ELEVENLABS_API_KEY`
    - `GROQ_API_KEY`
-   - After deploy, set `SPEECH_ENGINE_PUBLIC_URL` to your Railway public URL (e.g. `https://your-app.up.railway.app`)
+   - After deploy, set `SPEECH_ENGINE_PUBLIC_URL` to your Railway public URL (e.g. `https://the-missing-angle-production.up.railway.app`)
    - Run `python3 setup_speech_engines.py` locally with that URL, then add `SARA_SPEECH_ENGINE_ID`, `MAYA_SPEECH_ENGINE_ID`, `COLE_SPEECH_ENGINE_ID` in Railway.
 4. Open **Settings → Networking → Generate domain** and play at your `*.up.railway.app` URL.
 
@@ -292,7 +292,7 @@ python3 scripts/generate_music.py --only cole_video_call
 
 **Speech Engine in one sentence:** Talk to Sara, Maya, or Cole like a real detective; Speech Engine makes them answer back.
 
-**Demo:** [the-missing-angle.vercel.app](https://the-missing-angle.vercel.app) *(live voice requires Speech Engine backend — see setup above)*
+**Demo:** [the-missing-angle-production.up.railway.app](https://the-missing-angle-production.up.railway.app) — full experience with Speech Engine live interviews, WebSockets, and fast video streaming.
 
 ---
 
