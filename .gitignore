@@ -2,6 +2,7 @@
 .venv/
 venv/
 __pycache__/
+.pycache_tmp/
 *.py[cod]
 .DS_Store
 
@@ -9,6 +10,7 @@ __pycache__/
 static/cache/
 static/scenes-flow/
 
-# Local scratch/old patch artifacts
+# Local scratch / unused asset dumps
 *.patch
-apply_skip_lipsync_talk_mode.py
+video/
+control-room/
