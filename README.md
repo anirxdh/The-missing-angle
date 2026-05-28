@@ -150,8 +150,8 @@ Wrong accusation endings are intentional — the game punishes reading motive wi
 ### Run locally
 
 ```bash
-git clone <your-repo-url>
-cd speechengine
+git clone https://github.com/rashmi-star/The-missing-angle.git
+cd The-missing-angle
 python3 -m pip install -r requirements.txt
 cp .env.example .env
 # Add ELEVENLABS_API_KEY and GROQ_API_KEY to .env
@@ -215,7 +215,7 @@ Speech Engine needs a **public WebSocket** endpoint. Vercel serves the scripted 
    - Run `python3 setup_speech_engines.py` locally with that URL, then add `SARA_SPEECH_ENGINE_ID`, `MAYA_SPEECH_ENGINE_ID`, `COLE_SPEECH_ENGINE_ID` in Railway.
 4. Open **Settings → Networking → Generate domain** and play at your `*.up.railway.app` URL.
 
-Verify deploy: `GET /api/health` should return `"platform": "railway"`.
+Verify deploy: `GET /api/health` should return `"platform": "railway"`, `"status": "ok"`, and `"live_voice": true`.
 
 ### Optional: Vercel (HTTP-only fallback)
 
@@ -259,7 +259,7 @@ See [`.env.example`](.env.example) for the full list.
 ## Project structure
 
 ```
-speechengine/
+The-missing-angle/
 ├── server.py              # Game API, TTS/STT, Speech Engine WebSockets
 ├── sara_engine.py         # Groq handlers for Sara / Maya / Cole Speech Engine
 ├── story_engine.py        # Scene state machine
@@ -286,6 +286,7 @@ python3 scripts/generate_music.py --only cole_video_call
 ## Hackathon submission
 
 **Event:** [Hack #10: Speech Engine](https://hacks.elevenlabs.io/hackathons/9)  
+**Repo:** [github.com/rashmi-star/The-missing-angle](https://github.com/rashmi-star/The-missing-angle)  
 **Tag on social:** `@elevenlabsio` · `#ElevenHacks`
 
 **What we built:** A voice-native interactive film where **ElevenLabs Speech Engine** is the main interaction layer — three suspects you interrogate out loud over WebRTC, each with their own Speech Engine agent, ElevenLabs voice, and Groq-driven personality. ElevenLabs owns the voice pipeline (STT, TTS, turn-taking); we own the mystery logic (lies, deflections, cracks under pressure).
