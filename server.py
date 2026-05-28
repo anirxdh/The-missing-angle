@@ -55,6 +55,61 @@ ELEVENLABS_BASE    = "https://api.elevenlabs.io/v1"
 GROQ_API_KEY       = os.getenv("GROQ_API_KEY", "")
 _groq_client: Optional[AsyncGroq] = None
 
+_REQUIRED_ENV = ("ELEVENLABS_API_KEY", "GROQ_API_KEY")
+_SPEECH_ENGINE_ENV = (
+    "SPEECH_ENGINE_PUBLIC_URL",
+    "SARA_SPEECH_ENGINE_ID",
+    "MAYA_SPEECH_ENGINE_ID",
+    "COLE_SPEECH_ENGINE_ID",
+)
+
+
+def _env_check() -> dict:
+    """Summarize which env vars are set (values never exposed)."""
+    required = {k: bool(os.getenv(k, "")) for k in _REQUIRED_ENV}
+    speech_engine = {k: bool(os.getenv(k, "")) for k in _SPEECH_ENGINE_ENV}
+    missing_required = [k for k, ok in required.items() if not ok]
+    missing_speech = [k for k, ok in speech_engine.items() if not ok]
+    playable = not missing_required
+    live_voice = playable and not missing_speech
+    if not playable:
+        status = "missing_required"
+    elif not live_voice:
+        status = "degraded"
+    else:
+        status = "ok"
+    return {
+        "status": status,
+        "platform": "vercel" if ON_VERCEL else ("railway" if ON_RAILWAY else "local"),
+        "ready": {"playable": playable, "live_voice": live_voice},
+        "elevenlabs": required["ELEVENLABS_API_KEY"],
+        "groq": required["GROQ_API_KEY"],
+        "speech_engine": {
+            "public_url": speech_engine["SPEECH_ENGINE_PUBLIC_URL"],
+            "sara": speech_engine["SARA_SPEECH_ENGINE_ID"],
+            "maya": speech_engine["MAYA_SPEECH_ENGINE_ID"],
+            "cole": speech_engine["COLE_SPEECH_ENGINE_ID"],
+        },
+        "missing": {
+            "required": missing_required,
+            "speech_engine": missing_speech,
+        },
+    }
+
+
+def _log_env_check() -> None:
+    check = _env_check()
+    platform = check["platform"]
+    if check["status"] == "ok":
+        print(f"[Env] OK ({platform}) — playable + live voice ready")
+        return
+    if check["ready"]["playable"]:
+        missing = ", ".join(check["missing"]["speech_engine"]) or "none"
+        print(f"[Env] Degraded ({platform}) — playable, live voice incomplete: {missing}")
+        return
+    missing = ", ".join(check["missing"]["required"]) or "none"
+    print(f"[Env] ERROR ({platform}) — missing required: {missing}")
+
 _trailer_cache: dict = {}
 
 ROOFTOP_EVIDENCE_AUDIO = {
@@ -186,6 +241,8 @@ Respond with:
 
 @app.on_event("startup")
 async def startup():
+    _log_env_check()
+
     # Vercel filesystem is read-only except /tmp; pre-generated assets ship in git.
     if ON_VERCEL:
         print("[Startup] Vercel — skipping background media pre-generation")
@@ -1095,15 +1152,14 @@ def _should_narrate(scene: dict) -> bool:
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok",
-            "platform": "vercel" if ON_VERCEL else ("railway" if ON_RAILWAY else "local"),
-            "elevenlabs": bool(ELEVENLABS_API_KEY),
-            "groq":       bool(GROQ_API_KEY),
-            "speech_engine": {
-                "sara": bool(os.getenv("SARA_SPEECH_ENGINE_ID", "")),
-                "maya": bool(os.getenv("MAYA_SPEECH_ENGINE_ID", "")),
-                "cole": bool(os.getenv("COLE_SPEECH_ENGINE_ID", "")),
-            }}
+    check = _env_check()
+    if not check["ready"]["playable"]:
+        return Response(
+            content=json.dumps(check),
+            status_code=503,
+            media_type="application/json",
+        )
+    return check
 
 @app.get("/api/scenes")
 async def get_scenes():

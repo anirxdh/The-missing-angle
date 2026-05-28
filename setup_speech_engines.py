@@ -72,9 +72,9 @@ async def create_speech_engine(character: str) -> str:
             speech_engine=SpeechEngineConfig(ws_url=ws_url),
             name=f"The Missing Angle — {character.title()}",
         )
-        print(f"[{character}] Updated Speech Engine {result.speech_engine_id}")
+        print(f"[{character}] Updated Speech Engine {result.engine_id}")
         print(f"  ws_url = {ws_url}")
-        return result.speech_engine_id
+        return result.engine_id
 
     # Create new resource
     result = await client.speech_engine.create(
@@ -82,7 +82,7 @@ async def create_speech_engine(character: str) -> str:
         speech_engine=SpeechEngineConfig(ws_url=ws_url),
         tts=TtsConversationalConfigInput(voice_id=voice_id) if voice_id else None,
     )
-    seid = result.speech_engine_id
+    seid = result.engine_id
     print(f"[{character}] Created Speech Engine: {seid}")
     print(f"  ws_url = {ws_url}")
     print(f"\nAdd to .env:")
