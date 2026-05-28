@@ -1,353 +1,279 @@
 {
   "story_title": "THE MISSING ANGLE",
-  "story_premise": "You are watching a thriller that has already happened. At each pause, you choose which clue the film follows, and that changes what the ending means.",
   "scenes": {
-    "party_night": {
-      "id": "party_night",
-      "title": "The Film Begins",
-      "atmosphere": "party_night",
+    "crime_scene": {
+      "id": "crime_scene",
+      "title": "The Last Party",
+      "type": "video",
+      "atmosphere": "intro_party",
+      "still_image": null,
       "characters_present": [],
       "pause_at": 99,
-      "auto_advance": "security_cam",
+      "advance_after": "rooftop_investigation",
       "minimum_duration": 14,
       "narrator_character": "NARRATOR",
+      "narration": "Last night, Maya Reyes and Sara Malik celebrated on this rooftop—their startup was funded, and they were flying out by morning. Daniel Reed was Maya's secret boyfriend. He was upset when he learned she was leaving. That night, no one knew it would be his last.",
+      "story_card": {
+        "kicker": "CASE FILE / DANIEL REED",
+        "title": "HIS LAST NIGHT ON THE ROOF",
+        "beats": [
+          "Daniel was upset — Maya's flight meant she was leaving him behind.",
+          "No one on that rooftop knew it would be his last night.",
+          "By morning, Daniel Reed was dead."
+        ],
+        "cta": "LET'S INVESTIGATE"
+      },
       "question": null,
-      "branches": {},
-      "narration": "It starts like any other night. <break time=\"0.8s\" /> Music too loud. Faces moving through the dark. <break time=\"1.1s\" /> Then, somewhere beyond the party, everything changes."
+      "branches": {}
     },
-    "security_cam": {
-      "id": "security_cam",
-      "title": "The Missing Moment",
-      "atmosphere": "security_cam",
+    "rooftop_investigation": {
+      "id": "rooftop_investigation",
+      "title": "Morning Return - Three Clues",
+      "type": "investigation3d",
+      "atmosphere": "rooftop_establishing",
+      "guide_text": "It's time to find the evidence and catch the real person behind it.",
+      "guide_speaker": "DETECTIVE",
+      "advance_after": "cctv_landing"
+    },
+    "cctv_landing": {
+      "id": "cctv_landing",
+      "title": "CCTV — Rooftop Feed",
+      "type": "video",
+      "atmosphere": "cctv_review",
+      "still_image": null,
       "characters_present": [],
       "pause_at": 99,
-      "auto_advance": "sara_calls",
+      "auto_advance": "sara_interview_1",
+      "minimum_duration": 16,
       "narrator_character": "NARRATOR",
+      "narration": "CCTV gives us fragments — the party, the argument, Maya and Sara leaving, Daniel left behind. Did you notice someone else on the roof? Let's start with our main suspects: Sara, Maya, and Cole.",
       "question": null,
-      "branches": {},
-      "narration": "By morning, there is a missing moment. <break time=\"0.9s\" /> A blurred landing. A silence nobody can explain. <break time=\"1.1s\" /> The camera caught enough to accuse someone, but not enough to be certain."
+      "branches": {}
     },
-    "intro": {
-      "id": "intro",
-      "title": "The Morning After",
-      "atmosphere": "intro",
-      "characters_present": [],
+    "sara_interview_1": {
+      "id": "sara_interview_1",
+      "title": "Video Call - Sara Malik",
+      "type": "interrogation",
+      "atmosphere": "sara_video_call",
+      "suspect_video": "/static/scenes/sara_video_call.mp4",
+      "suspect": "SARA",
+      "advance_after": "maya_interview_1",
+      "questions": [
+        {
+          "key": "sara_party",
+          "cole_asks": "Why were you and Maya celebrating that night?",
+          "canon_hint": "Maya and I are business partners. Our funding came through, and we were flying out the next morning. The party was supposed to be our last night before the trip, and Daniel did not know yet.",
+          "cracks": true,
+          "cracks_status": "JOB ABROAD"
+        },
+        {
+          "key": "sara_maya",
+          "cole_asks": "CCTV shows Maya and Daniel arguing like a couple. Were they together?",
+          "canon_hint": "Yes. Maya was Daniel\u2019s girlfriend. She kept it quiet because the business trip was already tense, and she was afraid the relationship would make everything look like betrayal.",
+          "cracks": true,
+          "cracks_status": "COUPLE CONFIRMED",
+          "unlocks_evidence": "maya_daniel_couple"
+        }
+      ],
+      "evidence_reactions": {
+        "couple_reveal": "They were together. Maya was scared people would only see the fight and blame her.",
+        "audio_recorder": "Daniel took her recorder. That is why she panicked.",
+        "memory_card": "If that card has the audio, listen to it before blaming Maya.",
+        "camera_panel": "Cole was security. He could make the camera lie."
+      }
+    },
+    "maya_interview_1": {
+      "id": "maya_interview_1",
+      "title": "Video Call - Maya Reyes",
+      "type": "interrogation",
+      "atmosphere": "maya_video_call",
+      "suspect_video": "/static/scenes/maya_video_call.mp4",
+      "suspect": "MAYA",
+      "advance_after": "cole_interview_1",
+      "questions": [
+        {
+          "key": "maya_relationship",
+          "cole_asks": "Were you Daniel's girlfriend?",
+          "canon_hint": "Yes. We were together, and I was going to tell him after the party that Sara and I had to travel the next morning. Then he played the recording he made about Cole — and the fight turned ugly.",
+          "cracks": true,
+          "cracks_status": "GIRLFRIEND",
+          "unlocks_evidence": "maya_daniel_couple"
+        },
+        {
+          "key": "maya_phone",
+          "cole_asks": "What was on the phone Daniel took?",
+          "canon_hint": "Audio. Daniel found gaps in the camera logs and realized Cole was keeping doctored footage to blackmail people in the building. I recorded Daniel explaining it — for proof, not because I wanted him dead.",
+          "cracks": true,
+          "cracks_status": "PHONE MOTIVE",
+          "unlocks_evidence": "recording_motive"
+        }
+      ],
+      "evidence_reactions": {
+        "audio_recorder": "Daniel tore the recorder out of my hand when I grabbed for it.",
+        "memory_card": "That card is the only reason you can hear what really happened.",
+        "camera_panel": "Cole controlled the building cameras. Daniel knew that.",
+        "unknown_man": "That was Cole. He was watching us before the camera glitched."
+      }
+    },
+    "cole_interview_1": {
+      "id": "cole_interview_1",
+      "title": "Video Call - Adrian Cole",
+      "type": "interrogation",
+      "atmosphere": "cole_video_call",
+      "suspect_video": "/static/scenes/cole_video_call.mp4",
+      "suspect": "COLE",
+      "advance_after": "audio_reconstruction",
+      "questions": [
+        {
+          "key": "cole_camera",
+          "cole_asks": "Your credential triggered the blackout. Why?",
+          "canon_hint": "My credential appears in logs all over that building. That proves a system action, not murder. Someone could have used the panel while I was dealing with calls outside.",
+          "cracks": true,
+          "cracks_status": "OVERRIDE DENIED",
+          "unlocks_evidence": "cole_override_denial"
+        },
+        {
+          "key": "cole_audio",
+          "cole_asks": "The SD card has Daniel saying your name. What was he accusing you of?",
+          "canon_hint": "Daniel was drunk and scared. He thought he could ruin me with a story about missing footage. You still do not have video of me pushing him.",
+          "cracks": true,
+          "cracks_status": "MOTIVE DENIED",
+          "unlocks_evidence": "cole_motive_denial"
+        }
+      ],
+      "evidence_reactions": {
+        "camera_panel": "Logs can be misleading. You know that.",
+        "unknown_man": "Security staff watching a rooftop party is not suspicious.",
+        "memory_card": "Audio can be cut. Context matters.",
+        "couple_reveal": "A jealous girlfriend gives you motive before it gives me one."
+      }
+    },
+    "audio_reconstruction": {
+      "id": "audio_reconstruction",
+      "title": "Evidence Whiteboard",
+      "type": "audio_reconstruction",
+      "atmosphere": "cctv_review",
+      "guide_text": "",
+      "guide_speaker": "DETECTIVE",
+      "guide_character": "NARRATOR_MALE",
+      "fragments": [
+        {
+          "key": "couple_reveal",
+          "label": "MAYA + DANIEL",
+          "speaker": "MAYA",
+          "voice_character": "MAYA",
+          "text": "Daniel, listen to me. I was going to tell you after the party. Sara and I leave tomorrow because the partnership finally got funded, not because I stopped loving you."
+        },
+        {
+          "key": "sara_helping",
+          "label": "SARA PULLS AWAY",
+          "speaker": "SARA",
+          "voice_character": "SARA",
+          "text": "Maya, come on. We have the morning flight. Leave the phone and walk away from Daniel before this ruins everything."
+        },
+        {
+          "key": "unknown_man",
+          "label": "UNKNOWN VOICE",
+          "speaker": "ADRIAN COLE",
+          "voice_character": "COLE",
+          "text": "Daniel, the roof camera is unstable. Give me Maya's phone and that backup before your blackmail story gets louder."
+        },
+        {
+          "key": "missing_interval",
+          "label": "CAMERA FEED CUT",
+          "speaker": "DANIEL",
+          "voice_character": "DANIEL",
+          "text": "Cole, why are you killing the feed? Maya already has the audio. You cannot erase both copies."
+        }
+      ],
+      "resolution": "Maya and Sara left Daniel alive. Cole stayed, cut the feed, and killed the one person who could prove he blackmailed tenants with hidden footage.",
+      "advance_after": "case_decision"
+    },
+    "case_decision": {
+      "id": "case_decision",
+      "title": "Name the Killer",
+      "type": "video",
+      "atmosphere": "cctv_review",
+      "characters_present": [
+        "COLE"
+      ],
       "pause_at": 6,
-      "auto_advance": "sara_calls",
-      "question": null,
-      "branches": {},
-      "narration": null
+      "question": {
+        "character": "COLE",
+        "text": "You have a girlfriend who hid a trip, a business partner who pulled her away, and a broken camera. Choose carefully, detective."
+      },
+      "branches": {
+        "accuse_sara": {
+          "label": "Accuse Sara / torn coat at railing / she lied about contact",
+          "next": "ending_accuse_sara"
+        },
+        "accuse_maya": {
+          "label": "Accuse Maya / stolen recording / she lied about the roof",
+          "next": "ending_accuse_maya"
+        },
+        "accuse_cole": {
+          "label": "Accuse Cole / camera override and recovered audio / identify the killer",
+          "next": "ending_killer_revealed"
+        }
+      },
+      "decision_prompt": "You are the detective. Who pushed Daniel Reed?"
     },
-    "sara_calls": {
-      "id": "sara_calls",
-      "title": "Sara's Lie",
-      "atmosphere": "sara_calls",
+    "ending_accuse_sara": {
+      "id": "ending_accuse_sara",
+      "title": "THE WRONG THREAD",
+      "type": "video",
+      "atmosphere": "sara_video_call",
       "characters_present": [
         "SARA"
       ],
       "pause_at": 6,
       "question": {
         "character": "SARA",
-        "text": "If Cole asks, I was never near the stairs. That is the only way this does not ruin all of us."
+        "text": "I lied about touching him. I did not push him."
       },
-      "branches": {
-        "stay_quiet": {
-          "label": "follow Sara's lie / protect Sara / keep her secret / stay with Sara / help Sara / trust Sara / cover for Sara",
-          "next": "detective_arrives"
-        },
-        "cant_lie": {
-          "label": "question the lie / expose the crack / doubt Sara / follow the truth / don't trust Sara / challenge Sara",
-          "next": "sara_comes_over"
-        }
-      },
-      "narration": "Sara calls before the police do. <break time=\"0.7s\" /> Her voice is steady. Too steady. <break time=\"0.8s\" /> She has already decided what to say.",
-      "decision_prompt": "Sara is still on the line. Do we protect the lie, or question it?"
+      "branches": {},
+      "is_ending": true,
+      "ending_type": "accuse_sara",
+      "narrator_character": "NARRATOR",
+      "narration": "You accuse Sara. You found the lie, not the murder. She protected Maya, pulled her away, and left Daniel alive. Cole walks."
     },
-    "detective_arrives": {
-      "id": "detective_arrives",
-      "title": "Cole's Camera",
-      "atmosphere": "detective_arrives",
-      "characters_present": [
-        "COLE"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "COLE",
-        "text": "She says she was upstairs. The camera says someone in her coat crossed the landing at 11:04."
-      },
-      "branches": {
-        "lie": {
-          "label": "hide the camera / protect the lie / keep watching Sara's version / help Sara / keep it hidden",
-          "next": "cole_pushes"
-        },
-        "truth": {
-          "label": "show the camera / follow Cole / reveal the footage / show the evidence / trust Cole",
-          "next": "ending_witness"
-        }
-      },
-      "narration": "Cole does not raise his voice. He never has to. He lets the camera make the room smaller.",
-      "decision_prompt": "The footage is ready. Do we hide the camera, or show what it saw?"
-    },
-    "cole_pushes": {
-      "id": "cole_pushes",
-      "title": "The Evidence",
-      "atmosphere": "cole_pushes",
-      "characters_present": [
-        "COLE"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "COLE",
-        "text": "Watch her hands. People lie with words. Their hands usually tell the truth first."
-      },
-      "branches": {
-        "hold_the_lie": {
-          "label": "cut away / protect Sara / keep the lie intact / hide the evidence / help Sara",
-          "next": "ending_complicit"
-        },
-        "confess": {
-          "label": "zoom in / follow the hands / inspect the frame / look closer / check the frame",
-          "next": "cole_follows_up"
-        }
-      },
-      "narration": "Four seconds. Rewind. Four seconds again. The scene is daring you to mistake motion for intent.",
-      "decision_prompt": "Cole rewinds the frame. Do we cut away, or look closer?"
-    },
-    "cole_follows_up": {
-      "id": "cole_follows_up",
-      "title": "Frame 1432",
-      "atmosphere": "cole_follows_up",
-      "characters_present": [
-        "COLE"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "COLE",
-        "text": "There. Frame 1432. Sara is not pushing him. She is reaching for something behind him."
-      },
-      "branches": {
-        "full_account": {
-          "label": "show the full frame / reveal everything / complete the evidence / show it all / full truth",
-          "next": "ending_witness_broken"
-        },
-        "partial": {
-          "label": "leave doubt / keep it unclear / hide the missing edge / keep it ambiguous",
-          "next": "ending_witness_doubt"
-        }
-      },
-      "narration": "The frame holds. A hand, a shoulder, the edge of someone else just outside the crop. One inch changes the story.",
-      "decision_prompt": "The missing edge is visible. Do we reveal the full frame, or leave doubt?"
-    },
-    "sara_comes_over": {
-      "id": "sara_comes_over",
-      "title": "Sara's Version",
-      "atmosphere": "sara_comes_over",
-      "characters_present": [
-        "SARA"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "SARA",
-        "text": "Pause it there. Before you decide what I am, look at who Daniel was blocking."
-      },
-      "branches": {
-        "listen": {
-          "label": "rewind five minutes / hear Sara out / follow her clue / listen to Sara / give Sara time",
-          "next": "maya_calls"
-        },
-        "already_called": {
-          "label": "cut to police / skip her explanation / end the scene / call police / don't listen",
-          "next": "ending_alone"
-        }
-      },
-      "narration": "Sara does not defend herself. She points to a corner of the frame, where the second version of the story has been waiting.",
-      "decision_prompt": "Sara points offscreen. Do we rewind for her, or cut to police?"
-    },
-    "maya_calls": {
-      "id": "maya_calls",
-      "title": "Maya's Angle",
-      "atmosphere": "maya_calls",
+    "ending_accuse_maya": {
+      "id": "ending_accuse_maya",
+      "title": "THE WRONG MOTIVE",
+      "type": "video",
+      "atmosphere": "maya_video_call",
       "characters_present": [
         "MAYA"
       ],
       "pause_at": 6,
       "question": {
         "character": "MAYA",
-        "text": "He had my phone. Sara was not chasing him. She was chasing what he stole from me."
-      },
-      "branches": {
-        "bring_maya": {
-          "label": "bring Maya into frame / reveal her side / connect both stories / bring Maya in / listen to Maya",
-          "next": "ending_truth_together"
-        },
-        "just_sara": {
-          "label": "stay with Sara / keep Maya offscreen / isolate the confession / just Sara / ignore Maya",
-          "next": "sara_reveals"
-        }
-      },
-      "narration": "The missing angle has a voice now. Not Sara's. Maya's.",
-      "decision_prompt": "Maya enters the story. Do we bring her into frame, or stay with Sara?"
-    },
-    "sara_reveals": {
-      "id": "sara_reveals",
-      "title": "The Fall",
-      "atmosphere": "sara_reveals",
-      "characters_present": [
-        "SARA"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "SARA",
-        "text": "I pushed his hand away. He stepped back like he knew the stair was not there. I swear I tried to catch him."
-      },
-      "branches": {
-        "believe_her": {
-          "label": "believe the reach / accept Sara's version / follow the rescue / believe Sara / trust Sara",
-          "next": "ending_truth"
-        },
-        "dont_believe_her": {
-          "label": "read it as murder / reject Sara / follow suspicion / don't believe Sara / blame Sara",
-          "next": "ending_betrayal"
-        }
-      },
-      "narration": "The fall finally plays without a cut. Somehow, that makes it less certain.",
-      "decision_prompt": "The fall is finally clear. Do we believe the reach, or read it as murder?"
-    },
-    "ending_complicit": {
-      "id": "ending_complicit",
-      "title": "COMPLICIT",
-      "atmosphere": "ending_complicit",
-      "characters_present": [
-        "SARA"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "SARA",
-        "text": "Some stories survive because nobody looks at the part that hurts."
+        "text": "I chased my phone. Cole chased the evidence."
       },
       "branches": {},
       "is_ending": true,
-      "ending_type": "complicit",
-      "narration": "The cut protects Sara. Daniel becomes an accident. The ending feels peaceful because it refuses to look down."
+      "ending_type": "accuse_maya",
+      "narrator_character": "NARRATOR",
+      "narration": "You accuse Maya. The relationship made her look guilty, but the recovered audio clears the timeline. She lost Daniel twice, and Cole walks."
     },
-    "ending_witness": {
-      "id": "ending_witness",
-      "title": "THE CLEAN CUT",
-      "atmosphere": "ending_witness",
+    "ending_killer_revealed": {
+      "id": "ending_killer_revealed",
+      "title": "WHAT REALLY HAPPENED",
+      "type": "video",
+      "atmosphere": "truth_reveal_cole",
       "characters_present": [
         "COLE"
       ],
       "pause_at": 6,
       "question": {
         "character": "COLE",
-        "text": "A camera does not know motive. It only knows who was there."
+        "text": "You cannot prove what happened after the camera went dark."
       },
       "branches": {},
       "is_ending": true,
-      "ending_type": "witness",
-      "narration": "The obvious footage wins. Sara is taken in. The case makes sense, which is usually when a story is most dangerous."
-    },
-    "ending_witness_broken": {
-      "id": "ending_witness_broken",
-      "title": "TOO LATE",
-      "atmosphere": "ending_witness_broken",
-      "characters_present": [
-        "COLE"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "COLE",
-        "text": "That frame should have been the beginning. Instead, it arrives at the end."
-      },
-      "branches": {},
-      "is_ending": true,
-      "ending_type": "witness_broken",
-      "narration": "The full frame clears the shape of Sara's hand. It cannot clear the lie she told before anyone saw it."
-    },
-    "ending_witness_doubt": {
-      "id": "ending_witness_doubt",
-      "title": "SHADOW OF DOUBT",
-      "atmosphere": "ending_witness_doubt",
-      "characters_present": [
-        "COLE"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "COLE",
-        "text": "Enough to doubt. Not enough to know."
-      },
-      "branches": {},
-      "is_ending": true,
-      "ending_type": "witness_doubt",
-      "narration": "The edge stays hidden. Doubt does what truth cannot: it opens every door and closes none of them."
-    },
-    "ending_truth": {
-      "id": "ending_truth",
-      "title": "TRUTH",
-      "atmosphere": "ending_truth",
-      "characters_present": [
-        "SARA"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "SARA",
-        "text": "I did not save him. But I tried."
-      },
-      "branches": {},
-      "is_ending": true,
-      "ending_type": "truth",
-      "narration": "The movie chooses the reach over the shove. Daniel still falls. Sara still lies. Only the meaning changes."
-    },
-    "ending_truth_together": {
-      "id": "ending_truth_together",
-      "title": "UNITED",
-      "atmosphere": "ending_truth_together",
-      "characters_present": [
-        "MAYA"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "MAYA",
-        "text": "Now play it with all of us in the frame."
-      },
-      "branches": {},
-      "is_ending": true,
-      "ending_type": "truth_together",
-      "narration": "Maya enters the frame, and the whole film tilts. Sara was not hiding a murder. She was hiding who Daniel had cornered first."
-    },
-    "ending_betrayal": {
-      "id": "ending_betrayal",
-      "title": "BETRAYED",
-      "atmosphere": "ending_betrayal",
-      "characters_present": [
-        "SARA"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "SARA",
-        "text": "You saw the same frame I did. You just needed it to mean something worse."
-      },
-      "branches": {},
-      "is_ending": true,
-      "ending_type": "betrayal",
-      "narration": "The angle decides before the truth can speak. Sara becomes guilty because the frame needs someone to blame."
-    },
-    "ending_alone": {
-      "id": "ending_alone",
-      "title": "ALONE",
-      "atmosphere": "ending_alone",
-      "characters_present": [
-        "SARA"
-      ],
-      "pause_at": 6,
-      "question": {
-        "character": "SARA",
-        "text": "Then you never get to know what was behind him."
-      },
-      "branches": {},
-      "is_ending": true,
-      "ending_type": "alone",
-      "narration": "The explanation is cut. Sara disappears into the next scene, and the film leaves you holding the wrong question."
+      "ending_type": "killer_revealed",
+      "narrator_character": "NARRATOR",
+      "narration": "Yes. Cole blackmailed people with doctored building footage. Daniel found out, and Cole cut the feed and pushed him off the roof to bury the proof."
     }
   }
 }

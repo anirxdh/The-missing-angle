@@ -10,13 +10,14 @@ SCENES = SCENE_DATA["scenes"]
 
 @dataclass
 class StoryState:
-    current_scene: str = "party_night"
+    current_scene: str = "crime_scene"
     previous_scenes: list = field(default_factory=list)
     choices_made: list = field(default_factory=list)
     session_id: str = ""
+    interview_replies: dict = field(default_factory=lambda: {"SARA": [], "MAYA": [], "COLE": []})
 
     def get_scene(self) -> dict:
-        return SCENES.get(self.current_scene, SCENES["party_night"])
+        return SCENES.get(self.current_scene, SCENES["crime_scene"])
 
 
 class StoryEngine:
