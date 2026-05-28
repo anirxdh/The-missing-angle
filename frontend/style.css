@@ -1998,21 +1998,6 @@ body:has(#ri-scene:not(.ri-hidden)) #subtitle-area {
     radial-gradient(circle at 18% 12%, rgba(152, 29, 38, 0.10) 0%, transparent 34%),
     radial-gradient(circle at 82% 88%, rgba(210, 171, 74, 0.08) 0%, transparent 36%),
     #050608;
-  overflow: hidden;
-}
-
-body.dr-interview {
-  overflow-x: hidden;
-}
-
-body.dr-interview .dr-topbar {
-  left: 0;
-  right: 0;
-  padding: 0 24px;
-}
-
-body.dr-interview .dr-progress {
-  margin-right: 0;
 }
 
 .dr-intg-frame {
@@ -2063,15 +2048,8 @@ body.dr-interview .dr-progress {
 /* Left panel — witness feed */
 #dr-intg-section.dr-active {
   position: fixed !important;
-  top: 92px;
-  left: 0 !important;
-  right: auto !important;
-  bottom: 0 !important;
-  width: 40% !important;
-  max-width: none;
-  height: auto !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  top: 92px; left: 0; bottom: 0;
+  width: 40%; height: auto;
   display: flex !important;
   flex-direction: column;
   align-items: stretch;
@@ -2079,11 +2057,11 @@ body.dr-interview .dr-progress {
   background: #04060a;
   border: none;
   border-right: 1px solid rgba(210, 171, 74, 0.14);
-  border-radius: 0 !important;
+  border-radius: 0;
+  padding: 0;
   gap: 0;
   z-index: 20;
   overflow: hidden;
-  box-sizing: border-box;
 }
 
 /* Video fills the left panel */
@@ -2143,25 +2121,17 @@ body.dr-interview .dr-progress {
 /* Right panel — detective controls */
 #dr-controls.dr-active {
   position: fixed !important;
-  top: 92px;
-  left: 40% !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: auto !important;
-  max-width: none;
-  height: auto !important;
-  margin: 0 !important;
+  top: 92px; right: 0; bottom: 0; left: 40%;
+  width: 60%; height: auto;
   display: flex !important;
   flex-direction: column;
   justify-content: flex-start;
-  padding: 28px 32px 32px;
+  padding: 28px 36px 32px;
   background: linear-gradient(180deg, rgba(10, 11, 15, 0.98) 0%, rgba(6, 7, 10, 1) 100%);
   border-top: none;
   border-left: 1px solid rgba(210, 171, 74, 0.12);
   z-index: 80;
   overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
 }
 
 #dr-controls.dr-active::before {
@@ -2440,14 +2410,7 @@ body.dr-interview .dr-subtitle {
 
 /* Right panel: compact top so SARA heading appears near the top */
 #dr-room:has(#dr-intg-section.dr-active) #dr-controls.dr-active {
-  padding: 28px 32px 32px !important;
-}
-
-#dr-room:has(#dr-intg-section.dr-active) .dr-question-btns,
-#dr-room.dr-interview-mode .dr-question-btns {
-  max-width: none;
-  width: 100%;
-  margin: 0;
+  padding: 24px 40px 32px !important;
 }
 
 /* Hide the duplicate interrogation label because the topbar already shows it. */
@@ -2962,10 +2925,10 @@ body.dr-interview .dr-subtitle {
 
   #dr-controls.dr-active {
     top: calc(84px + 38dvh);
-    left: 0 !important;
-    right: 0 !important;
+    left: 0;
+    right: 0;
     bottom: 0;
-    width: auto !important;
+    width: 100%;
     height: auto;
     padding: 18px 16px max(18px, env(safe-area-inset-bottom));
   }

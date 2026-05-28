@@ -341,7 +341,7 @@ function scheduleHttpAutoAdvance(){
   if(currentScene?.has_narration && !narrationDone) return;
   if(httpAdvanceTimer){ clearTimeout(httpAdvanceTimer); httpAdvanceTimer = null; }
   const delay = currentScene?.has_narration
-    ? 600
+    ? 1500
     : (pendingHttpAutoAdvance.delay_ms || 3000);
   httpAdvanceTimer = setTimeout(()=>{
     pendingHttpAutoAdvance = null;
@@ -1020,30 +1020,33 @@ async function onSceneNarration(msg){
 
 async function animateNarration(text, audio_b64){
   const displayText = cleanSpeechText(text);
+  // Estimate total audio duration from MP3 base64 size (128 kbps → 16000 B/s)
   const totalMs = audio_b64
     ? (audio_b64.length * 0.75 / 16000) * 1000
     : voiceDuration(displayText, "NARRATOR");
 
+  // Split at sentence boundaries — keeps punctuation with the phrase
   const phrases = displayText
     .replace(/([.!?])\s+/g, "$1\n")
     .replace(/\.\.\.\s*/g, "...\n")
+    .replace(/—\s*/g, "—\n")
     .split("\n")
     .map(s => s.trim())
     .filter(Boolean);
 
-  const msPerPhrase = totalMs / Math.max(phrases.length, 1);
+  const msPerPhrase = totalMs / phrases.length;
 
   for(const phrase of phrases){
     if(_narrationAbort) break;
     subtitleText.style.opacity = "1";
     subtitleText.classList.add("typing");
-    await typewriter(phrase, Math.min(msPerPhrase * 0.72, 2800));
+    await typewriter(phrase, Math.min(msPerPhrase * 0.55, 2200));
     if(_narrationAbort) break;
     subtitleText.classList.remove("typing");
-    await sleep(Math.max(80, msPerPhrase * 0.1));
+    await sleep(Math.max(300, msPerPhrase * 0.35));
     if(_narrationAbort) break;
     subtitleText.style.opacity = "0";
-    await sleep(60);
+    await sleep(220);
     subtitleText.textContent = "";
   }
 }

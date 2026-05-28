@@ -34,9 +34,9 @@
       "characters_present": [],
       "pause_at": 99,
       "auto_advance": "sara_interview_1",
-      "minimum_duration": 12,
+      "minimum_duration": 16,
       "narrator_character": "NARRATOR",
-      "narration": "This is the CCTV from the building — the party, the argument, Maya and Sara leaving, Daniel left behind. Look for anyone else on the roof, then we talk to Sara, Maya, and Cole.",
+      "narration": "This is the CCTV we pulled from the building. Let's check it — the party, the argument, Maya and Sara leaving, Daniel left behind. Watch for anyone else on the roof. Time to talk to our main suspects: Sara, Maya, and Cole.",
       "question": null,
       "branches": {}
     },

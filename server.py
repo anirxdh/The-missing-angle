@@ -227,20 +227,12 @@ async def tts(text: str, character: str) -> bytes:
     settings = char["voice_settings"]
     model_id = char.get("model_id", "eleven_turbo_v2_5")
 
-    payload = {
-        "text": text,
-        "model_id": model_id,
-        "voice_settings": settings,
-        "output_format": "mp3_44100_128",
-    }
-    if char.get("speed"):
-        payload["speed"] = char["speed"]
-
     async with httpx.AsyncClient(timeout=30) as c:
         r = await c.post(
             f"{ELEVENLABS_BASE}/text-to-speech/{voice_id}",
             headers={"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json"},
-            json=payload,
+            json={"text": text, "model_id": model_id,
+                  "voice_settings": settings, "output_format": "mp3_44100_128"},
         )
         if r.status_code != 200:
             raise RuntimeError(f"TTS failed: {r.text}")
@@ -462,7 +454,7 @@ async def _send_scene_start(sink: SessionSink, scene: dict, sid: Optional[str] =
         elapsed = time.time() - t0
         minimum_secs = float(scene.get("minimum_duration", 0))
         # +2.5s accounts for: 1s client video-load delay + 0.5s crossfade + 1s safety margin
-        adv_delay = max(0.5, narration_secs + 1.0 - elapsed, minimum_secs - elapsed)
+        adv_delay = max(0.5, narration_secs + 2.5 - elapsed, minimum_secs - elapsed)
         sink.schedule_auto_advance(auto_next, adv_delay, sid or "")
         return
 
