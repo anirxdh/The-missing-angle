@@ -4,6 +4,8 @@
 
 <h1 align="center">The Missing Angle</h1>
 
+> **Write-up:** [Interrogating AI Suspects Out Loud with ElevenLabs Speech Engine](https://anirudhvasudevan.com/blog/the-missing-angle-voice-mystery/), the architecture, decisions and lessons. Built by [Anirudh Vasudevan](https://anirudhvasudevan.com/).
+
 <p align="center">
   <strong>An interactive murder mystery you investigate with your voice.</strong><br/>
   Watch CCTV. Collect evidence on a 3D rooftop. <strong>Interrogate three suspects live with ElevenLabs Speech Engine.</strong><br/>
